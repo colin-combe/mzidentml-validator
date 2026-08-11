@@ -29,11 +29,11 @@ When the validation finished a report like this is created:
 The commandline tool enables to validate the mzidentml using the commandline. When the tool get executed the following message defines the parameters needed by the tool: 
 
 ```bash 
-java -jar mzidentml-validator-1.4.35-SNAPSHOT-cmd.jar
+java -jar mzidentml-validator-1.4.36-SNAPSHOT-cmd.jar
 
 usage: mzidentml-validator [-e] -f <arg> [-l <arg>] [-m <arg>] [-o <arg>]
        [-r <arg>] [-s] [-t <arg>] [-w <arg>] [-x <arg>]
-mzidentml-validator version 1.4.35
+mzidentml-validator version 1.4.36-SNAPSHOT
 
  -e,--full_validation
  -f,--mzidentml_file_to_validate <arg>   mzidentml file to be validated
@@ -52,7 +52,7 @@ mzidentml-validator version 1.4.35
 ### schema validation
 
 ```bash
-java -jar mzidentml-validator-1.4.35-SNAPSHOT-cmd.jar -s -x 1.1.0 -f file.mzid
+java -jar mzidentml-validator-1.4.36-SNAPSHOT-cmd.jar -s -x 1.1.0 -f file.mzid
 ```
 
 -f (`--mzidentml_file_to_validate`): The file input is defined by the parameter **-f** which is the mzIdentML to be validated. 
@@ -63,7 +63,7 @@ These options are mutually exclusive, if the `-x` option is provided the tool us
 ### semantic (full) validation 
 
 ```bash
-java -jar mzidentml-validator-1.4.35-SNAPSHOT-cmd.jar -e -f file.mzid
+java -jar mzidentml-validator-1.4.36-SNAPSHOT-cmd.jar -e -f file.mzid
 ```
 
 -e (`--full_validation`): perform semantic and schema validation. 

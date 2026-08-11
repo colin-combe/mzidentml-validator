@@ -4,7 +4,7 @@
 	<artifactId>mzidentml-validator</artifactId>
 	<packaging>jar</packaging>
 
-	<version>1.4.35-SNAPSHOT</version>
+	<version>1.4.36-SNAPSHOT</version>
 	<name>HUPO-PSI mzIdentML semantic and MIAPE validator</name>
 	<description>A semantic and MIAPE validator for HUPO-PSI mzIdentML XML files.</description>
 

@@ -1671,7 +1671,7 @@ public class MzIdentMLValidator extends Validator {
 
         Options options = createValidatorOptions();
 
-        String header = "mzidentml-validator version 1.4.35\n\n";
+        String header = "mzidentml-validator version 1.4.36-SNAPSHOT\n\n";
         String footer = "\nPlease report issues at https://github.com/ypriverol/mzidentml-validator/issues";
 
         HelpFormatter formatter = new HelpFormatter();

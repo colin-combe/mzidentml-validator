@@ -771,17 +771,20 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
      * Gets the file name/path of the ontologies file.<br>
      * Note: If found in the folder where application has launched it overrides the default files.
      * 
-     * @param ontologyPropertyName can take the values: ontologies.file or local.ontologies.file
+     * @param ontologyPropertyName can take the values: ols.ontologies.file or local.ontologies.file
      * @return InputStream for the ontologies file
      */
     private InputStream getOntologiesFileInputStream(String ontologyPropertyName) throws IOException {
         String ontologiesFile = MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER + MzIdentMLValidatorGUI.getProperty(ontologyPropertyName);
         File file = new File(ontologiesFile);
 
-        // check if the file exists. If not, return the path
+        // check if the file exists. If not, fall back to the bundled copy of the *requested*
+        // config - falling back to a hardcoded ontologies.xml here silently forced remote (OLS)
+        // lookups even when the user had asked for the local OBO files.
         if (!file.exists()) {
             MzIdentMLValidatorGUI.LOGGER.debug("ontologiesFile does not exist: " + ontologiesFile);
-            return Thread.currentThread().getContextClassLoader().getResourceAsStream("ontologies.xml");
+            return Thread.currentThread().getContextClassLoader()
+                    .getResourceAsStream(MzIdentMLValidatorGUI.getProperty(ontologyPropertyName));
         }
 
         return Files.newInputStream(file.toPath());

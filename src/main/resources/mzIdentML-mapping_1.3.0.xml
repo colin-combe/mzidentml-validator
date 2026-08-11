@@ -260,7 +260,7 @@
             <CvTerm termAccession="MS:1001512" useTermName="false" useTerm="false" termName="Sequence database filters" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
         </CvMappingRule>
 
-        <CvMappingRule id="DatabaseTranslationTranslationTable_must_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/TranslationTable/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/TranslationTable" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="DatabaseTranslationTranslationTable_must_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/translationTable/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/TranslationTable" cvTermsCombinationLogic="OR">
             <CvTerm termAccession="MS:1001025" useTermName="false" useTerm="true" termName="translation table" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
 			<CvTerm termAccession="MS:1001410" useTermName="false" useTerm="true" termName="translation start codons" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
             <CvTerm termAccession="MS:1001423" useTermName="false" useTerm="true" termName="translation table description" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />

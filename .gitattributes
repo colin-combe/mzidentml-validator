@@ -1,0 +1,3 @@
+# Upstream ships some OBO files with CRLF (PSI-MOD.obo); normalise on checkin so
+# CV refreshes produce reviewable diffs.
+*.obo text eol=lf

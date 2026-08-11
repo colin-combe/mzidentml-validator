@@ -46,7 +46,7 @@ import uk.ac.ebi.jmzidml.model.mzidml.SpectrumIdentificationItem;
 import uk.ac.ebi.jmzidml.xml.io.MzIdentMLUnmarshaller;
 
 /**
- * @author Florian Reisinger Date: 25-Oct-2010 modified by Salvador Martínez, Gerhard Mayer
+ * @author Florian Reisinger Date: 25-Oct-2010 modified by Salvador Martï¿½nez, Gerhard Mayer
  * @since $version
  */
 public class MzIdentMLValidator extends Validator {
@@ -74,7 +74,27 @@ public class MzIdentMLValidator extends Validator {
      * Enums.
      */
     public enum MzIdVersion {
-        _1_1, _1_2
+        _1_1, _1_2, _1_3
+    }
+
+    /** Schema versions the -x command line option accepts, in ascending order. */
+    private static final List<String> SUPPORTED_SCHEMA_VERSIONS = Arrays.asList("1.1.0", "1.1.1", "1.2.0", "1.3.0");
+
+    private static final String NO_SCHEMA_VERSION_MSG =
+        "Error, if schema file is not provided, a version of the schema must be provided: "
+        + String.join(", ", SUPPORTED_SCHEMA_VERSIONS);
+
+    /**
+     * Checks if the version of the file currently being validated is at least the given one.
+     * Declared in ascending order, so {@link MzIdVersion} ordinals compare as versions do.
+     * Newer versions inherit the checks introduced for older ones.
+     *
+     * @param minVersion the lowest {@link MzIdVersion} the check applies to
+     * @return false if the current file version is unknown (null) or older than minVersion
+     */
+    public static boolean isVersionAtLeast(MzIdVersion minVersion) {
+        return MzIdentMLValidator.currentFileVersion != null
+            && MzIdentMLValidator.currentFileVersion.ordinal() >= minVersion.ordinal();
     }
 
     /**
@@ -237,6 +257,8 @@ public class MzIdentMLValidator extends Validator {
                 return this.getMzIdentMLSchema("mzIdentML1.1.0.xsd", "url.schema.1.1.0");
             case _1_2:
                 return this.getMzIdentMLSchema("mzIdentML1.2.0.xsd", "url.schema.1.2.0");
+            case _1_3:
+                return this.getMzIdentMLSchema("mzIdentML1.3.0.xsd", "url.schema.1.3.0");
             default:
                 throw new ValidatorException("Not supported mzIdentML version: " + version);
         }
@@ -438,7 +460,18 @@ public class MzIdentMLValidator extends Validator {
             this.initGuiProgress();
 
             this.updateProgress("Indexing input file" + this. STR_ELLIPSIS);
-            this.unmarshaller = new MzIdentMLUnmarshaller(xmlFile);
+            try {
+                this.unmarshaller = new MzIdentMLUnmarshaller(xmlFile);
+            }
+            catch (IllegalStateException ise) {
+                // jmzidentml rejects any version it does not know. Report it rather than let the
+                // exception escape: in the GUI it runs on a SwingWorker thread with no handler,
+                // which would leave the progress bar spinning forever.
+                this.LOGGER.error("Could not index the input file.", ise);
+                return this.getInvalidOrEmptyFileErrorMessages(xmlFile,
+                    " declares an mzIdentML version that is not supported. Supported versions are "
+                    + String.join(", ", SUPPORTED_SCHEMA_VERSIONS) + ".");
+            }
             String mzIdentMLVersion = this.unmarshaller.getMzIdentMLVersion();
 
             // flag if the version has changed
@@ -776,14 +809,18 @@ public class MzIdentMLValidator extends Validator {
      * @param mzIdentMLVersion
      * @return the mzid version
      */
-    private MzIdVersion getMzIdentMLVersion(String mzIdentMLVersion) {
+    private static MzIdVersion getMzIdentMLVersion(String mzIdentMLVersion) {
         switch (mzIdentMLVersion) {
             case "1.1.0":
+            case "1.1.1":
             case "1.1":
                 return MzIdentMLValidator.MzIdVersion._1_1;
             case "1.2.0":
             case "1.2":
                 return MzIdentMLValidator.MzIdVersion._1_2;
+            case "1.3.0":
+            case "1.3":
+                return MzIdentMLValidator.MzIdVersion._1_3;
         }
         
         return null;
@@ -867,7 +904,7 @@ public class MzIdentMLValidator extends Validator {
         }
         objectRulesChecked = this.checkElementObjectRule(MzIdentMLElement.SpectrumIdentificationItem);
 
-        if (MzIdentMLValidator.currentFileVersion == MzIdentMLValidator.MzIdVersion._1_2) {
+        if (MzIdentMLValidator.isVersionAtLeast(MzIdentMLValidator.MzIdVersion._1_2)) {
             this.checkElementObjectRule(MzIdentMLElement.DBSequence);
             //this.checkElementObjectRule(MzIdentMLElement.SpectrumIdentificationList);
             objectRulesChecked = this.checkElementObjectRule(MzIdentMLElement.SpectrumIdentificationResult);
@@ -962,14 +999,14 @@ public class MzIdentMLValidator extends Validator {
         this.checkElementCvMapping(MzIdentMLElement.SpectrumIdentificationList);    // this includes SIR and SII
         this.checkElementCvMapping(MzIdentMLElement.FragmentationTable);
         this.checkElementCvMapping(MzIdentMLElement.Measure);
-        if (MzIdentMLValidator.currentFileVersion == MzIdentMLValidator.MzIdVersion._1_2) {
+        if (MzIdentMLValidator.isVersionAtLeast(MzIdentMLValidator.MzIdVersion._1_2)) {
             this.checkElementCvMapping(MzIdentMLElement.ProteinDetectionList);
         }
         this.checkElementCvMapping(MzIdentMLElement.ProteinAmbiguityGroup);
         // disabled because is included in the SIL
         // this.checkElementCvMapping(MzIdentMLElement.SpectrumIdentificationResult);
         
-        if (MzIdentMLValidator.currentFileVersion == MzIdentMLValidator.MzIdVersion._1_2) {
+        if (MzIdentMLValidator.isVersionAtLeast(MzIdentMLValidator.MzIdVersion._1_2)) {
             this.checkElementCvMapping(MzIdentMLElement.ProteinDetectionHypothesis);
         }
         
@@ -1062,7 +1099,7 @@ public class MzIdentMLValidator extends Validator {
         }
 
         // Special handling: Now check the results for the cross-linking case
-        if (MzIdentMLValidator.currentFileVersion == MzIdentMLValidator.MzIdVersion._1_2) {
+        if (MzIdentMLValidator.isVersionAtLeast(MzIdentMLValidator.MzIdVersion._1_2)) {
             if (AdditionalSearchParamsObjectRule.bIsCrossLinkingSearch) {
                 if (element.getClazz().getName().endsWith("SpectrumIdentificationResult")) {
                     objectRuleResult.addAll(XLinkSIIObjectRule.checkRulesWithHashMapContent());
@@ -1697,21 +1734,21 @@ public class MzIdentMLValidator extends Validator {
                     }
                 } else if (cmd.hasOption("x")) {
                     String version = cmd.getOptionValue("x");
-                    if(!Objects.equals(version, "1.1.0") && !Objects.equals(version, "1.1.1") && !Objects.equals(version, "1.2.0")){
-                        System.err.println("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
-                        throw new IOException("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
+                    if (!SUPPORTED_SCHEMA_VERSIONS.contains(version)) {
+                        System.err.println(NO_SCHEMA_VERSION_MSG);
+                        throw new IOException(NO_SCHEMA_VERSION_MSG);
                     }
                     String fileSchemaName = String.format("mzIdentML%s.xsd", version);
                     defaultStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(fileSchemaName);
                 }else {
-                    System.err.println("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
-                    throw new IOException("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
+                    System.err.println(NO_SCHEMA_VERSION_MSG);
+                    throw new IOException(NO_SCHEMA_VERSION_MSG);
                 }
 
                 // Set the schema.
                 if(defaultStream == null && schemaFile == null){
-                    System.err.println("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
-                    throw new IOException("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
+                    System.err.println(NO_SCHEMA_VERSION_MSG);
+                    throw new IOException(NO_SCHEMA_VERSION_MSG);
                 }
                 if(schemaFile != null)
                     validator.setSchema(schemaFile.toURI());
@@ -1829,7 +1866,7 @@ public class MzIdentMLValidator extends Validator {
                         .option("x")
                         .longOpt("schema_version")
                         .hasArg(true)
-                        .desc("Schema version, supported values 1.1.0, 1.1.1, 1.2.0")
+                        .desc("Schema version, supported values " + String.join(", ", SUPPORTED_SCHEMA_VERSIONS))
                 .build());
         options.addOption(Option.builder()
                         .option("w")

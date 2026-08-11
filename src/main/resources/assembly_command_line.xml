@@ -18,12 +18,16 @@
             <includes>
                 <include>miape-msi-rules.1.1.0.xml</include>
                 <include>miape-msi-rules.1.2.0.xml</include>
+                <include>miape-msi-rules.1.3.0.xml</include>
                 <include>mzIdentML-mapping_1.1.0.xml</include>
                 <include>mzIdentML-mapping_1.2.0.xml</include>
+                <include>mzIdentML-mapping_1.3.0.xml</include>
                 <include>ObjectRules.1.1.0.xml</include>
                 <include>ObjectRules.1.2.0.xml</include>
+                <include>ObjectRules.1.3.0.xml</include>
                 <include>ObjectRulesMIAPE.1.1.0.xml</include>
                 <include>ObjectRulesMIAPE.1.2.0.xml</include>
+                <include>ObjectRulesMIAPE.1.3.0.xml</include>
                 <include>ontologies.xml</include>
                 <include>ontologies_local.xml</include>
                 <include>ruleFilter_MIAPEMSI.xml</include>

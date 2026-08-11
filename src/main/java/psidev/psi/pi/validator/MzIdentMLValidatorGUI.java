@@ -96,6 +96,8 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     
     public final String STR_MAPPING    = "mapping";
     public final String STR_OBJECT     = "object";
+    /** Rule file version used when the .mzid declares a version the validator does not know. */
+    private static final String STR_LATEST_VERSION = "1.3.0";
     public final String COLOR_RED      = "red";
     public final String COLOR_ORANGE   = "orange";
     public final String COLOR_GREEN    = "green";
@@ -866,28 +868,32 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     }
 
     /**
-     * Checks if the .mzid version is 1.1
-     * @param mzIdVersion the {@link MzIdVersion} of the file to validate> 1.1 or 1.2.
-     * @return true if .mzid version is 1.1
+     * Gets the suffix identifying a .mzid version in the keys of validation.properties.
+     *
+     * @param mzIdVersion the {@link MzIdVersion} of the file to validate
+     * @return the property key suffix, or null if the version is not supported
      */
-    private boolean isVersion11(MzIdVersion mzIdVersion) {
-        return MzIdVersion._1_1.equals(mzIdVersion);
-    }
-    
-    /**
-     * Checks if the .mzid version is 1.2
-     * @param mzIdVersion the {@link MzIdVersion} of the file to validate> 1.1 or 1.2.
-     * @return true if .mzid version is 1.2
-     */
-    private boolean isVersion12(MzIdVersion mzIdVersion) {
-        return MzIdVersion._1_2.equals(mzIdVersion);
+    private static String getPropertyKeySuffix(MzIdVersion mzIdVersion) {
+        if (mzIdVersion == null) {
+            return null;
+        }
+        switch (mzIdVersion) {
+            case _1_1:
+                return "1.1.0";
+            case _1_2:
+                return "1.2.0";
+            case _1_3:
+                return "1.3.0";
+            default:
+                return null;
+        }
     }
 
     /**
      * Gets the file name/path of a mapping or object rule file.<br>
      * Note: If found in the folder were application has launched it overrides the default files.
-     * 
-     * @param mzIdVersion the {@link MzIdVersion} of the file to validate: 1.1 or 1.2.
+     *
+     * @param mzIdVersion the {@link MzIdVersion} of the file to validate: 1.1, 1.2 or 1.3.
      * @param ruleKind "mapping" or "object"
      * @return InputStream for the rule file
      * @throws FileNotFoundException file not found exception
@@ -895,37 +901,26 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     public InputStream getRuleFileInputStream(MzIdVersion mzIdVersion, String ruleKind) throws IOException {
         String propertyName = ruleKind;
         String ruleFile = this.STR_EMPTY;
-        
+
         if (this.isMIAPEValidationSelected()) {
             propertyName += ".rule.file.miape.validation.";
         }
         else if (this.isSemanticValidationSelected()) {
             propertyName += ".rule.file.semantic.validation.";
         }
-        
-        if (this.isVersion11(mzIdVersion)) {
-            propertyName += "1.1.0";
+
+        final String versionSuffix = MzIdentMLValidatorGUI.getPropertyKeySuffix(mzIdVersion);
+        if (versionSuffix != null) {
+            propertyName += versionSuffix;
             ruleFile = MzIdentMLValidatorGUI.getProperty(propertyName);
-            MzIdentMLValidatorGUI.LOGGER.debug(".mzid version: 1.1.0");
-        }
-        else if (this.isVersion12(mzIdVersion)) {
-            propertyName += "1.2.0";
-            ruleFile = MzIdentMLValidatorGUI.getProperty(propertyName);
-            MzIdentMLValidatorGUI.LOGGER.debug(".mzid version: 1.2.0");
+            MzIdentMLValidatorGUI.LOGGER.debug(".mzid version: " + versionSuffix);
         }
         else {
-            // set default
-            MzIdentMLValidatorGUI.LOGGER.error("Usupported .mzid version: " + mzIdVersion);
-            switch (ruleKind) {
-                case STR_MAPPING:
-                    ruleFile = "mzIdentML-mapping_1.2.0.xml";
-                    break;
-                case STR_OBJECT:
-                    ruleFile = "ObjectRules.1.2.0.xml";
-                    break;
-                default:
-                    MzIdentMLValidatorGUI.LOGGER.error("Unsupported ruleKind: " + ruleKind);
-            }
+            // Fall back to the newest rule files, keeping the MIAPE/semantic choice the caller made.
+            MzIdentMLValidatorGUI.LOGGER.error("Unsupported .mzid version: " + mzIdVersion
+                + ", falling back to the " + MzIdentMLValidatorGUI.STR_LATEST_VERSION + " rule files.");
+            propertyName += MzIdentMLValidatorGUI.STR_LATEST_VERSION;
+            ruleFile = MzIdentMLValidatorGUI.getProperty(propertyName);
         }
 
         try {
@@ -1594,7 +1589,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
             jPanelValidator.jTextInputFile.setText(args[0]);
         }
 
-        JFrame validatorFrame = new JFrame("mzIdentML validator GUI (mzIdentML versions 1.1.1 & 1.2.0)");
+        JFrame validatorFrame = new JFrame("mzIdentML validator GUI (mzIdentML versions 1.1.1, 1.2.0 & 1.3.0)");
         validatorFrame.getContentPane().add(jPanelValidator, BorderLayout.CENTER);
         validatorFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         validatorFrame.setResizable(true);

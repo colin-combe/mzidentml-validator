@@ -46,7 +46,7 @@ mzidentml-validator version 1.4.36-SNAPSHOT
  -t,--xml_file_filter_file <arg>         The filter definition file
  -w,--schema_file <arg>
  -x,--schema_version <arg>               Schema version, supported values
-                                         1.1.0, 1.1.1, 1.2.0
+                                         1.1.0, 1.1.1, 1.2.0, 1.3.0
 
 ```
 ### schema validation
@@ -56,7 +56,7 @@ java -jar mzidentml-validator-1.4.36-SNAPSHOT-cmd.jar -s -x 1.1.0 -f file.mzid
 ```
 
 -f (`--mzidentml_file_to_validate`): The file input is defined by the parameter **-f** which is the mzIdentML to be validated. 
--x (`--schema_version`): The schema version that will be used to validate the mzidentml file. Currently, te validator supports versions `1.1.0`, `1.1.1`, `1.2.0`. 
+-x (`--schema_version`): The schema version that will be used to validate the mzidentml file. Currently, te validator supports versions `1.1.0`, `1.1.1`, `1.2.0`, `1.3.0`. 
 
 These options are mutually exclusive, if the `-x` option is provided the tool uses one of the mzIdentML default schemas in the following repo (https://github.com/HUPO-PSI/mzIdentML/tree/master/schema).  
 
@@ -75,6 +75,17 @@ The following files are needed fot the tool:
 - xml_file_filter_file: An example can be found the default configuration file here https://raw.githubusercontent.com/ypriverol/mzidentml-validator/main/src/main/resources/ruleFilter_MIAPEMSI.xml
 - mzml_file_to_validate: The mzidentml that will be validated
 - message_level: One of the following values: **DEBUG, INFO, WARN, ERROR, FATAL**
+
+Note that on the command line the rule files are **not** chosen from the version of the file being
+validated. If `-m` and `-r` are omitted, the 1.1.0 rule files are used whatever the file declares,
+so for a 1.2.0 or 1.3.0 file you have to name them explicitly:
+
+```bash
+java -jar mzidentml-validator-{version}-cmd.jar -e -f file.mzid \
+  -m mzIdentML-mapping_1.3.0.xml -r ObjectRules.1.3.0.xml
+```
+
+The GUI does select the rule files from the detected version, and needs no such flags.
 
 ### Contributing
 

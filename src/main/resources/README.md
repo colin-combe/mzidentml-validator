@@ -10,6 +10,11 @@
 
 Note that these files will be overriden by others if found in the application path
 
+The version x.y.z in a file name is the mzIdentML version the file applies to; 1.1.0, 1.2.0 and
+1.3.0 are shipped. validation.properties maps a detected .mzid version to the files to load, so
+adding a version means adding a set of files *and* the corresponding keys there (1.1.1 has keys but
+reuses the 1.1.0 files).
+
 #### ruleFilter_ files:
 Let’s say, we want to check that some CVs must be present (let’s call them CV terms B) just when other certain CV term (let’s call it CV term A) is present in the protocol.
 There are two files that we should modify: the mapping file and the ruleFilter file.
@@ -43,8 +48,8 @@ As soon as they have a unique id, it doesn’t matter which rule type they are.
 #### MIAPE validation
 MIAPE validation is using other different mapping and ruleFiler files (see https://github.com/HUPO-PSI/mzIdentML/tree/master/validator/resources):
 
-o   mzIdentML-mapping_1.2.0.xml, ObjectRules.1.2.0.xml and ruleFilter_semantic.xml for semantic validation, and
+o   mzIdentML-mapping_x.y.z.xml, ObjectRules.x.y.z.xml and ruleFilter_semantic.xml for semantic validation, and
 
-o   miape-msi-rules.1.2.0.xml, ObjectRulesMIAPE.1.2.0.xml and  ruleFilter_MIAPEMSI.xml for the MIAPE MSI validation.
+o   miape-msi-rules.x.y.z.xml, ObjectRulesMIAPE.x.y.z.xml and  ruleFilter_MIAPEMSI.xml for the MIAPE MSI validation.
 
 so any addition to the semantic validation files should also be incorporated to the MIAPE validation files.

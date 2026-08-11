@@ -2,6 +2,11 @@ package psidev.psi.pi.validator;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -15,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Properties;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -23,6 +29,7 @@ import javax.swing.SpinnerModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.SimpleAttributeSet;
@@ -77,6 +84,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     private final int DEFAULT_MAX_NUMBER_TO_REPORT_SAME_MESSAGE = 1;
     private static final int EXIT_SUCCESS = 0;
     public static final int EXIT_FAILURE  = -1;
+    private static final int TITLE_TEXT_INSET = 5;    // TitledBorder.TEXT_INSET_H, which is private
     private final ClassLoader cl;
    
     private final String STR_FILE_EXT_MZID_GZ   = ".mzid.gz";
@@ -115,9 +123,43 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
      */
     public MzIdentMLValidatorGUI() {
         this.initComponents();
+        this.widenPanelsToFitTitles(this);
         this.enableRadioButtons(false);
         this.setSpinnerModel();
         this.cl = this.getClass().getClassLoader();
+    }
+
+    /**
+     * Widens every panel whose titled border caption is wider than the panel itself.
+     * A layout manager sizes a panel from its contents and ignores the width its
+     * TitledBorder caption needs, so long captions are silently truncated - and by how
+     * much depends on the look and feel's font metrics. Called on the whole tree rather
+     * than on named panels so it keeps holding for edited captions and new panels.
+     * @param container the container whose descendants are to be checked
+     */
+    private void widenPanelsToFitTitles(Container container) {
+        // depth first: a parent's preferred width can only be measured once its children are final
+        for (Component child : container.getComponents()) {
+            if (child instanceof Container) {
+                this.widenPanelsToFitTitles((Container) child);
+            }
+        }
+
+        if (!(container instanceof JComponent)) {
+            return;
+        }
+        JComponent panel = (JComponent) container;
+        if (!(panel.getBorder() instanceof TitledBorder)) {
+            return;
+        }
+
+        // TitledBorder paints the caption inset by TEXT_INSET_H at either end but leaves that out
+        // of its own getMinimumSize(), so add it back - without it the last characters still clip
+        int titleWidth = ((TitledBorder) panel.getBorder()).getMinimumSize(panel).width + 2 * TITLE_TEXT_INSET;
+        if (panel.getPreferredSize().width < titleWidth) {
+            panel.setPreferredSize(new Dimension(titleWidth, panel.getPreferredSize().height));
+            panel.setMinimumSize(new Dimension(titleWidth, panel.getMinimumSize().height));
+        }
     }
 
     /**
@@ -173,10 +215,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
         jTextField1.setText("jTextField1");
 
         setAutoscrolls(true);
-        setMaximumSize(new java.awt.Dimension(1200, 1980));
-        setMinimumSize(new java.awt.Dimension(768, 800));
         setName("MzIdentMLValidator-GUI"); // NOI18N
-        setPreferredSize(new java.awt.Dimension(900, 1024));
 
         jPanel1.setBorder(javax.swing.BorderFactory.createTitledBorder("File selection"));
 
@@ -350,7 +389,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
                 .addContainerGap()
                 .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(18, 18, 18)
-                .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, 165, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jPanel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(18, 18, 18)
                 .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
@@ -374,9 +413,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel5Layout.createSequentialGroup()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 627, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 29, Short.MAX_VALUE))
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 627, Short.MAX_VALUE)
         );
 
         jPanel6.setBorder(javax.swing.BorderFactory.createTitledBorder("Progress"));
@@ -526,8 +563,8 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -1560,7 +1597,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
         JFrame validatorFrame = new JFrame("mzIdentML validator GUI (mzIdentML versions 1.1.1 & 1.2.0)");
         validatorFrame.getContentPane().add(jPanelValidator, BorderLayout.CENTER);
         validatorFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        validatorFrame.setResizable(false);
+        validatorFrame.setResizable(true);
         validatorFrame.addWindowListener(new WindowAdapter() {
             /**
              * Invoked when a window is in the process of being closed. The
@@ -1573,8 +1610,18 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
                 System.exit(EXIT_SUCCESS);
             }
         });
-        validatorFrame.setLocation(100, 100);
+        // pack() sizes the frame from the layout, so it fits whatever look and feel is in use,
+        // but cap it at the screen area actually available to windows
         validatorFrame.pack();
+        Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+        Dimension packed = validatorFrame.getSize();
+        Dimension size = new Dimension(Math.min(packed.width, screen.width), Math.min(packed.height, screen.height));
+
+        // note the order: Window.setBounds() silently grows the frame back to its minimum size,
+        // so the minimum has to be the capped size rather than the packed one
+        validatorFrame.setMinimumSize(size);
+        validatorFrame.setSize(size);
+        validatorFrame.setLocationRelativeTo(null);
         validatorFrame.setVisible(true);
     }
 

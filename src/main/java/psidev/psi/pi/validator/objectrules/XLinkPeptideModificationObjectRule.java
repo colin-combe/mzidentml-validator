@@ -119,10 +119,14 @@ public class XLinkPeptideModificationObjectRule extends AObjectRule<Peptide> {
         List<ValidatorMessage> messages = new ArrayList<>();
         
         if (XLinkPeptideModificationObjectRule.XL_CVVALUE2CVACCESSION2PEPTID_MAP.isEmpty()) {
-            ValidatorMessage valMsg = new ValidatorMessage("No cross-linked modified peptides donors (MS:1002509) / receivers (MS:1002510) are found for a cross-linking file "
-                + XLinkPeptideModificationObjectRule.PEPTIDE_CONTEXT.getContext(),
-                MessageLevel.ERROR);
-            messages.add(valMsg);
+            // Peptides associated without a cross-linker (mzIdentML 1.3.0, MS:1003330) carry no
+            // donor / acceptor modification, so their absence is not an error in such a file.
+            if (!AdditionalSearchParamsObjectRule.bIsNoncovalentAssociationSearch) {
+                ValidatorMessage valMsg = new ValidatorMessage("No cross-linked modified peptides donors (MS:1002509) / receivers (MS:1002510) are found for a cross-linking file "
+                    + XLinkPeptideModificationObjectRule.PEPTIDE_CONTEXT.getContext(),
+                    MessageLevel.ERROR);
+                messages.add(valMsg);
+            }
         }
         else {
             XLinkPeptideModificationObjectRule.checkForPairedDonorReceiverPairs(messages);

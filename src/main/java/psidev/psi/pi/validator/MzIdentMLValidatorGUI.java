@@ -14,12 +14,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Properties;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -72,11 +69,8 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
      */
     private static final Logger LOGGER  = LogManager.getLogger(MzIdentMLValidatorGUI.class);
     private static final String NEW_LINE    = System.getProperty("line.separator");
-    private static final String STR_FILE_SEPARATOR  = System.getProperty("file.separator");
-    private static final String STR_RESOURCE_FOLDER = System.getProperty("user.dir") + STR_FILE_SEPARATOR + "resources" + STR_FILE_SEPARATOR;
     private static final String STR_ELLIPSIS= "...";
     private static final String DEFAULT_PROGRESS_MESSAGE    = "Select a file and press validate" + STR_ELLIPSIS;
-    private static final String STR_VALIDATION_PROPERTIES   = "validation.properties";
     private static final String STR_LAF_WINDOWS    = "Windows";
     
     private final String STR_4_INDENTATION  = "    ";
@@ -85,7 +79,6 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     private static final int EXIT_SUCCESS = 0;
     public static final int EXIT_FAILURE  = -1;
     private static final int TITLE_TEXT_INSET = 5;    // TitledBorder.TEXT_INSET_H, which is private
-    private final ClassLoader cl;
    
     private final String STR_FILE_EXT_MZID_GZ   = ".mzid.gz";
     private final String STR_FILE_EXT_MZID_ZIP  = ".mzid.zip";
@@ -94,10 +87,8 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     private final String STR_FILE_EXT_7Z        = ".7z";
     public final String STR_EMPTY       = "";
     
-    public final String STR_MAPPING    = "mapping";
-    public final String STR_OBJECT     = "object";
-    /** Rule file version used when the .mzid declares a version the validator does not know. */
-    private static final String STR_LATEST_VERSION = "1.3.0";
+    public final String STR_MAPPING    = ValidationRuleFiles.STR_MAPPING;
+    public final String STR_OBJECT     = ValidationRuleFiles.STR_OBJECT;
     public final String COLOR_RED      = "red";
     public final String COLOR_ORANGE   = "orange";
     public final String COLOR_GREEN    = "green";
@@ -128,7 +119,6 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
         this.widenPanelsToFitTitles(this);
         this.enableRadioButtons(false);
         this.setSpinnerModel();
-        this.cl = this.getClass().getClassLoader();
     }
 
     /**
@@ -809,84 +799,33 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     /**
      * Gets the file name/path of the ontologies file.<br>
      * Note: If found in the folder where application has launched it overrides the default files.
-     * 
+     *
      * @param ontologyPropertyName can take the values: ols.ontologies.file or local.ontologies.file
      * @return InputStream for the ontologies file
      */
     private InputStream getOntologiesFileInputStream(String ontologyPropertyName) throws IOException {
-        String ontologiesFile = MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER + MzIdentMLValidatorGUI.getProperty(ontologyPropertyName);
-        File file = new File(ontologiesFile);
-
-        // check if the file exists. If not, fall back to the bundled copy of the *requested*
-        // config - falling back to a hardcoded ontologies.xml here silently forced remote (OLS)
-        // lookups even when the user had asked for the local OBO files.
-        if (!file.exists()) {
-            MzIdentMLValidatorGUI.LOGGER.debug("ontologiesFile does not exist: " + ontologiesFile);
-            return Thread.currentThread().getContextClassLoader()
-                    .getResourceAsStream(MzIdentMLValidatorGUI.getProperty(ontologyPropertyName));
-        }
-
-        return Files.newInputStream(file.toPath());
+        return ValidationRuleFiles.getOntologiesInputStream(ontologyPropertyName);
     }
 
     /**
      * Gets the file name/path of the rule filter file.<br>
      * Note: If found in the folder where application has launched it overrides the default files.
-     * 
+     *
      * @return InputStream for the MIAPE rule filter file
      */
     private InputStream getMIAPEValidationRuleFilterInputStream() throws IOException {
-        String ruleFilterFileName = MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER + MzIdentMLValidatorGUI.getProperty("miape.filter.rule.file");
-        File file = new File(ruleFilterFileName);
-
-        // check if the file exists. If not, return the path
-        if (!file.exists()) {
-            MzIdentMLValidatorGUI.LOGGER.debug("ruleFilterFileName does not exist: " + ruleFilterFileName);
-            return this.cl.getResourceAsStream(ruleFilterFileName);
-        }
-
-        return Files.newInputStream(file.toPath());
+        return ValidationRuleFiles.getRuleFilterInputStream(ValidationRuleFiles.ValidationKind.MIAPE);
     }
 
     /**
      * Gets the file name/path of the rule filter file.<br>
      * Note: If found in the folder were application has launched it overrides
      * the default files.
-     * 
+     *
      * @return InputStream for the rule filter filer
      */
     private InputStream getSemanticValidationRuleFilterInputStream() throws IOException {
-        String ruleFilterFileName = MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER +  MzIdentMLValidatorGUI.getProperty("semantic.filter.rule.file");
-        File file = new File(ruleFilterFileName);
-
-        // check if the file exists. If not, return the path
-        if (!file.exists()) {
-            MzIdentMLValidatorGUI.LOGGER.debug("ruleFilterFileName does not exist: " + ruleFilterFileName);
-            return  Thread.currentThread().getContextClassLoader().getResourceAsStream("ruleFilter_semantic.xml");
-        }
-        return Files.newInputStream(file.toPath());
-    }
-
-    /**
-     * Gets the suffix identifying a .mzid version in the keys of validation.properties.
-     *
-     * @param mzIdVersion the {@link MzIdVersion} of the file to validate
-     * @return the property key suffix, or null if the version is not supported
-     */
-    private static String getPropertyKeySuffix(MzIdVersion mzIdVersion) {
-        if (mzIdVersion == null) {
-            return null;
-        }
-        switch (mzIdVersion) {
-            case _1_1:
-                return "1.1.0";
-            case _1_2:
-                return "1.2.0";
-            case _1_3:
-                return "1.3.0";
-            default:
-                return null;
-        }
+        return ValidationRuleFiles.getRuleFilterInputStream(ValidationRuleFiles.ValidationKind.SEMANTIC);
     }
 
     /**
@@ -896,47 +835,20 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
      * @param mzIdVersion the {@link MzIdVersion} of the file to validate: 1.1, 1.2 or 1.3.
      * @param ruleKind "mapping" or "object"
      * @return InputStream for the rule file
-     * @throws FileNotFoundException file not found exception
+     * @throws IOException in case of problems reading the rule file
      */
     public InputStream getRuleFileInputStream(MzIdVersion mzIdVersion, String ruleKind) throws IOException {
-        String propertyName = ruleKind;
-        String ruleFile = this.STR_EMPTY;
-
-        if (this.isMIAPEValidationSelected()) {
-            propertyName += ".rule.file.miape.validation.";
-        }
-        else if (this.isSemanticValidationSelected()) {
-            propertyName += ".rule.file.semantic.validation.";
-        }
-
-        final String versionSuffix = MzIdentMLValidatorGUI.getPropertyKeySuffix(mzIdVersion);
-        if (versionSuffix != null) {
-            propertyName += versionSuffix;
-            ruleFile = MzIdentMLValidatorGUI.getProperty(propertyName);
-            MzIdentMLValidatorGUI.LOGGER.debug(".mzid version: " + versionSuffix);
-        }
-        else {
-            // Fall back to the newest rule files, keeping the MIAPE/semantic choice the caller made.
-            MzIdentMLValidatorGUI.LOGGER.error("Unsupported .mzid version: " + mzIdVersion
-                + ", falling back to the " + MzIdentMLValidatorGUI.STR_LATEST_VERSION + " rule files.");
-            propertyName += MzIdentMLValidatorGUI.STR_LATEST_VERSION;
-            ruleFile = MzIdentMLValidatorGUI.getProperty(propertyName);
-        }
-
-        try {
-            URL url = new URL(ruleFile);
-            return url.openStream();
-        }
-        catch (IOException e) {
-            File file = new File(MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER + ruleFile);
-            if (!file.exists()) {
-                MzIdentMLValidatorGUI.LOGGER.debug(ruleKind + "RuleFile does not exist: " + ruleFile);
-                return this.cl.getResourceAsStream(ruleFile);
-            }
-            return Files.newInputStream(file.toPath());
-        }
+        return ValidationRuleFiles.getRuleFileInputStream(mzIdVersion, ruleKind, this.getValidationKind());
     }
-    
+
+    /**
+     * Gets the kind of validation selected by the user.
+     * @return MIAPE if a MIAPE validation was selected, semantic otherwise
+     */
+    public ValidationRuleFiles.ValidationKind getValidationKind() {
+        return this.isMIAPEValidationSelected() ? ValidationRuleFiles.ValidationKind.MIAPE : ValidationRuleFiles.ValidationKind.SEMANTIC;
+    }
+
     /**
      * Checks if semantic validation was selected.
      * @return flag indicating if a semantic validation was selected by the user
@@ -959,15 +871,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
      * @return The property value
      */
     public static String getProperty(String propertyName) {
-        // TODO: What is wrong here?
-
-
-        PropertyFile propFile = new PropertyFile();
-        MzIdentMLValidatorGUI.LOGGER.debug("Resources: " + MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER);
-        Properties properties = propFile.loadProperties(MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER + MzIdentMLValidatorGUI.STR_VALIDATION_PROPERTIES);
-        
-        
-        return properties.getProperty(propertyName);
+        return ValidationRuleFiles.getProperty(propertyName);
     }
 
     /**

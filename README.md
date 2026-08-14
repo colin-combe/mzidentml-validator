@@ -32,7 +32,7 @@ The commandline tool enables to validate the mzidentml using the commandline. Wh
 java -jar mzidentml-validator-1.4.36-SNAPSHOT-cmd.jar
 
 usage: mzidentml-validator [-e] -f <arg> [-l <arg>] [-m <arg>] [-o <arg>]
-       [-r <arg>] [-s] [-t <arg>] [-w <arg>] [-x <arg>]
+       [-p] [-r <arg>] [-R] [-s] [-t <arg>] [-w <arg>] [-x <arg>]
 mzidentml-validator version 1.4.36-SNAPSHOT
 
  -e,--full_validation
@@ -41,7 +41,12 @@ mzidentml-validator version 1.4.36-SNAPSHOT
                                          process
  -m,--cv_mapping_config_file <arg>       The CV mapping configuration file
  -o,--ontology_config_file <arg>         Ontology configuration file
+ -p,--miape_validation                   Use the MIAPE rule files instead
+                                         of the semantic ones
  -r,--coded_rules_config_file <arg>      Coded rules configuration file
+ -R,--remote_ontologies                  Look the ontologies up in OLS
+                                         instead of using the bundled OBO
+                                         files
  -s,--semantic_validation
  -t,--xml_file_filter_file <arg>         The filter definition file
  -w,--schema_file <arg>
@@ -49,6 +54,10 @@ mzidentml-validator version 1.4.36-SNAPSHOT
                                          1.1.0, 1.1.1, 1.2.0, 1.3.0
 
 ```
+
+The tool reports its result through the exit code: **0** if nothing was reported at the chosen
+error level, **1** if there were messages, and **2** if the file could not be validated at all
+(bad arguments, unreadable file, unsupported schema version).
 ### schema validation
 
 ```bash
@@ -68,24 +77,26 @@ java -jar mzidentml-validator-1.4.36-SNAPSHOT-cmd.jar -e -f file.mzid
 
 -e (`--full_validation`): perform semantic and schema validation. 
 
-The following files are needed fot the tool: 
-- ontology_config_file: An example can be found the default configuration file here https://raw.githubusercontent.com/ypriverol/mzidentml-validator/main/src/main/resources/ontologies.xml
-- cv_mapping_config_file: An example can be found the default configuration file here https://raw.githubusercontent.com/ypriverol/mzidentml-validator/main/src/main/resources/mzIdentML-mapping_1.1.0.xml
-- coded_rules_config_file: An example can be found the default configuration file here https://raw.githubusercontent.com/ypriverol/mzidentml-validator/main/src/main/resources/ObjectRulesMIAPE.1.1.0.xml
-- xml_file_filter_file: An example can be found the default configuration file here https://raw.githubusercontent.com/ypriverol/mzidentml-validator/main/src/main/resources/ruleFilter_MIAPEMSI.xml
-- mzml_file_to_validate: The mzidentml that will be validated
-- message_level: One of the following values: **DEBUG, INFO, WARN, ERROR, FATAL**
+No further arguments are needed: like the GUI, the command line picks the rule files matching the
+version the file declares (1.1.0/1.1.1, 1.2.0 or 1.3.0, see `validation.properties`) and uses the
+OBO files bundled with the application, so a run needs no network access.
 
-Note that on the command line the rule files are **not** chosen from the version of the file being
-validated. If `-m` and `-r` are omitted, the 1.1.0 rule files are used whatever the file declares,
-so for a 1.2.0 or 1.3.0 file you have to name them explicitly:
-
-```bash
-java -jar mzidentml-validator-{version}-cmd.jar -e -f file.mzid \
-  -m mzIdentML-mapping_1.3.0.xml -r ObjectRules.1.3.0.xml
-```
-
-The GUI does select the rule files from the detected version, and needs no such flags.
+Each of those defaults can be overridden:
+- `-p` (`--miape_validation`): use the MIAPE rule files (`ObjectRulesMIAPE.*`, `miape-msi-rules.*`)
+  of the file's version instead of the semantic ones.
+- `-R` (`--remote_ontologies`): resolve the ontologies through OLS instead of the bundled OBO files.
+- `-m` (`--cv_mapping_config_file`) and `-r` (`--coded_rules_config_file`): use the named rule files
+  whatever version the file declares, e.g.
+  ```bash
+  java -jar mzidentml-validator-{version}-cmd.jar -e -f file.mzid \
+    -m mzIdentML-mapping_1.3.0.xml -r ObjectRules.1.3.0.xml
+  ```
+- `-o` (`--ontology_config_file`): an ontologies configuration of your own, e.g.
+  https://raw.githubusercontent.com/ypriverol/mzidentml-validator/main/src/main/resources/ontologies.xml
+- `-t` (`--xml_file_filter_file`): a rule filter of your own, e.g.
+  https://raw.githubusercontent.com/ypriverol/mzidentml-validator/main/src/main/resources/ruleFilter_semantic.xml
+- `-l` (`--error_level`): one of **DEBUG, INFO, WARN, ERROR, FATAL**; only messages at or above this
+  level are reported.
 
 ### Contributing
 

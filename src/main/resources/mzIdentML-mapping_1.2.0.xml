@@ -18,6 +18,17 @@
         <CvReference cvName="XLMOD" cvIdentifier="XLMOD"/>
     </CvReferenceList>
 
+    <!--
+    Path casing:
+      cvElementPath and scopePath are both resolved against the jmzIdentML object model once the
+      xpath of the element being checked has been stripped off, and psi-tools requires
+      cvElementPath to start with scopePath (CvRuleManager.checkCvMapping). An earlier fix
+      corrected cvElementPath only, which left PeptideModification_must_rule,
+      CrosslinkingPeptideModification_may_rule and DatabaseTranslationTranslationTable_must_rule
+      selecting no objects at all: on the command line they silently checked nothing, and the GUI,
+      which runs that consistency check, dropped them altogether. The scopePaths now agree.
+    -->
+
     <CvMappingRuleList>
 		<CvMappingRule id="AuditCollectionPerson_should_rule" cvElementPath="/MzIdentML/AuditCollection/person/cvParam/@accession" requirementLevel="SHOULD" scopePath="/MzIdentML/AuditCollection/person" cvTermsCombinationLogic="OR">
 			<CvTerm termAccession="MS:1000587" useTermName="false" useTerm="true" termName="contact address" isRepeatable="true" allowChildren="false" cvIdentifierRef="MS" />
@@ -74,7 +85,7 @@
 		</CvMappingRule>
 		-->
 
-        <CvMappingRule id="PeptideModification_must_rule" cvElementPath="/MzIdentML/SequenceCollection/peptide/modification/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/SequenceCollection/Peptide/modification" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="PeptideModification_must_rule" cvElementPath="/MzIdentML/SequenceCollection/peptide/modification/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/SequenceCollection/peptide/modification" cvTermsCombinationLogic="OR">
 			<CvTerm termAccession="MS:1002509" useTermName="false" useTerm="true" termName="cross-link donor" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
 			<CvTerm termAccession="MS:1002510" useTermName="false" useTerm="true" termName="cross-link acceptor" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
             <CvTerm termAccession="UNIMOD:0" useTermName="false" useTerm="false" termName="unimod root node" isRepeatable="false" allowChildren="true" cvIdentifierRef="UNIMOD" />
@@ -207,7 +218,7 @@
             <CvTerm termAccession="MS:1001512" useTermName="false" useTerm="false" termName="Sequence database filters" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
         </CvMappingRule>
 
-        <CvMappingRule id="DatabaseTranslationTranslationTable_must_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/translationTable/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/TranslationTable" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="DatabaseTranslationTranslationTable_must_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/translationTable/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/translationTable" cvTermsCombinationLogic="OR">
             <CvTerm termAccession="MS:1001025" useTermName="false" useTerm="true" termName="translation table" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
 			<CvTerm termAccession="MS:1001410" useTermName="false" useTerm="true" termName="translation start codons" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
             <CvTerm termAccession="MS:1001423" useTermName="false" useTerm="true" termName="translation table description" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
@@ -317,7 +328,7 @@
             <CvTerm termAccession="MS:1002415" useTermName="false" useTerm="true" termName="protein group passes threshold" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
         </CvMappingRule>
 	
-    	<CvMappingRule id="PeptideLevelStatsSpectrumIdentificationItem_may_rule" cvElementPath="/MzIdentML/DataCollection/AnalysisData/SpectrumIdentificationList/spectrumIdentificationResult/spectrumIdentificationItem/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/DataCollection/AnalysisData/SpectrumIdentificationList/spectrumIdentificationResult/spectrumIdentificationItem" cvTermsCombinationLogic="OR">
+    	<CvMappingRule id="PeptideLevelStatsSpectrumIdentificationItem_must_rule" cvElementPath="/MzIdentML/DataCollection/AnalysisData/SpectrumIdentificationList/spectrumIdentificationResult/spectrumIdentificationItem/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/DataCollection/AnalysisData/SpectrumIdentificationList/spectrumIdentificationResult/spectrumIdentificationItem" cvTermsCombinationLogic="OR">
             <CvTerm termAccession="MS:1001143" useTermName="false" useTerm="false" termName="PSM-level search engine specific statistic" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
             <CvTerm termAccession="MS:1001968" useTermName="false" useTerm="false" termName="PTM localization PSM-level statistic" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
             <CvTerm termAccession="MS:1002538" useTermName="false" useTerm="false" termName="PTM localization confidence metric" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
@@ -375,7 +386,7 @@
             <CvTerm termAccession="MS:1002494" useTermName="false" useTerm="true" termName="cross-linking search" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
         </CvMappingRule>
 	
-        <CvMappingRule id="CrosslinkingPeptideModification_may_rule" cvElementPath="/MzIdentML/SequenceCollection/peptide/modification/cvParam/@accession" requirementLevel="MAY" scopePath="/MzIdentML/SequenceCollection/Peptide/modification" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="CrosslinkingPeptideModification_may_rule" cvElementPath="/MzIdentML/SequenceCollection/peptide/modification/cvParam/@accession" requirementLevel="MAY" scopePath="/MzIdentML/SequenceCollection/peptide/modification" cvTermsCombinationLogic="OR">
 			<CvTerm termAccession="MS:1002509" useTermName="false" useTerm="true" termName="cross-link donor" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
 			<CvTerm termAccession="MS:1002510" useTermName="false" useTerm="true" termName="cross-link acceptor" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
             <CvTerm termAccession="UNIMOD:0" useTermName="false" useTerm="false" termName="unimod root node" isRepeatable="false" allowChildren="true" cvIdentifierRef="UNIMOD" />

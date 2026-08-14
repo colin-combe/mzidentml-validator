@@ -68,27 +68,28 @@ public class PeptideEvidenceObjectRule extends AObjectRule<PeptideEvidence> {
         List<ValidatorMessage> messages = new ArrayList<>();
 
         if (!SearchTypeObjectRule.bIsDeNovoSearch) {
-            int start=0, end=0;
-            
-            try {
-                start = pev.getStart();
-                end = pev.getEnd();
-            }
-            catch (NullPointerException ex) {
+            // Both attributes are optional in the schema but, as its documentation says, have to
+            // be provided unless this is a de novo search. An absent one is reported as missing
+            // rather than as a wrong value: reading it used to throw, and the rule then carried
+            // on with 0 and reported the same element a second time as having wrong values.
+            final Integer start = pev.getStart();
+            final Integer end = pev.getEnd();
+
+            if (start == null || end == null) {
                 this.addMissingMessageToCollection(pev, messages);
             }
-            
-            if (start < 1 || end <= start) {
+            // end == start is a peptide of a single residue, which is legal.
+            else if (start < 1 || end < start) {
                 this.addWrongMessageToCollection(pev, messages);
             }
             else {
                 DBSequence dbSequence = pev.getDBSequence();    // TODO: Why is dbSequence here null ?
-                
-                if (dbSequence != null && end > dbSequence.getSeq().length()) {
-                    this.addWrongMessageToCollection(pev, messages);
+
+                if (dbSequence == null || dbSequence.getSeq() == null) {
+                    this.LOGGER.info("No sequence to check the end position against");
                 }
-                else {
-                    this.LOGGER.info("dbSequence is null");
+                else if (end > dbSequence.getSeq().length()) {
+                    this.addWrongMessageToCollection(pev, messages);
                 }
             }
         }

@@ -15,6 +15,22 @@
         <CvReference cvName="UO" cvIdentifier="UO"/>
     </CvReferenceList>
 
+    <!--
+    Path casing:
+      A rule path is read in two halves. The leading part must match, character for character, the
+      xpath of an element the validator checks (MzIdentMLElement.getXpath(), i.e. the XML spelling);
+      everything after it is walked as bean properties of the jmzIdentML object model, so those
+      steps have to carry the property name. Six rules spelled that remainder as XML element names
+      - Peptide/Modification, databaseFilters/Filter/FilterType, .../Include, .../Exclude,
+      databaseTranslation/TranslationTable and AnalysisSampleCollection/Sample - so they reported
+      "Flaw in the rule definition" and, apart from SampleContactRole_must_rule, never ran at all;
+      PeptideModification_must_rule is a MUST rule over the modification CV terms. The 1.2.0 and
+      1.3.0 files were corrected earlier, these were not. Corrected in cvElementPath and scopePath
+      alike: both are resolved the same way, and psi-tools requires cvElementPath to start with
+      scopePath (CvRuleManager.checkCvMapping). The 1.1 examples lose their flaw errors and gain
+      no new failures.
+    -->
+
     <CvMappingRuleList>
 		<CvMappingRule id="AuditCollectionPerson_should_rule" cvElementPath="/MzIdentML/AuditCollection/person/cvParam/@accession" requirementLevel="SHOULD" scopePath="/MzIdentML/AuditCollection/person" cvTermsCombinationLogic="OR">
 			<CvTerm termAccession="MS:1000587" useTermName="false" useTerm="true" termName="contact address" isRepeatable="true" allowChildren="false" cvIdentifierRef="MS" />
@@ -44,7 +60,7 @@
             <CvTerm termAccession="MS:1001266" useTermName="false" useTerm="false" termName="role type" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
         </CvMappingRule>
 
-        <CvMappingRule id="SampleContactRole_must_rule" cvElementPath="/MzIdentML/AnalysisSampleCollection/Sample/contactRole/role/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisSampleCollection/Sample/contactRole/role" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="SampleContactRole_must_rule" cvElementPath="/MzIdentML/AnalysisSampleCollection/sample/contactRole/role/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisSampleCollection/sample/contactRole/role" cvTermsCombinationLogic="OR">
             <CvTerm termAccession="MS:1001266" useTermName="false" useTerm="false" termName="role type" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
         </CvMappingRule>
 
@@ -66,7 +82,7 @@
         </CvMappingRule>
 		-->
 
-        <CvMappingRule id="PeptideModification_must_rule" cvElementPath="/MzIdentML/SequenceCollection/Peptide/Modification/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/SequenceCollection/Peptide/Modification" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="PeptideModification_must_rule" cvElementPath="/MzIdentML/SequenceCollection/peptide/modification/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/SequenceCollection/peptide/modification" cvTermsCombinationLogic="OR">
             <CvTerm termAccession="UNIMOD:0" useTermName="false" useTerm="false" termName="UNIMOD root" isRepeatable="false" allowChildren="true" cvIdentifierRef="UNIMOD" />
 			<CvTerm termAccession="MOD:00000" useTermName="false" useTerm="false" termName="protein modification" isRepeatable="false" allowChildren="true" cvIdentifierRef="MOD" />
 			<CvTerm termAccession="MS:1001471" useTermName="false" useTerm="false" termName="peptide modification details" isRepeatable="false" allowChildren="true" cvIdentifierRef="MS" />
@@ -152,19 +168,19 @@
             <CvTerm termAccession="MS:1001359" useTermName="false" useTerm="false" termName="ambiguous residues" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
         </CvMappingRule>
 
-        <CvMappingRule id="DatabaseFiltersFilterType_must_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/Filter/FilterType/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/Filter/FilterType" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="DatabaseFiltersFilterType_must_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/filter/filterType/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/filter/filterType" cvTermsCombinationLogic="OR">
             <CvTerm termAccession="MS:1001511" useTermName="false" useTerm="false" termName="Sequence database filter types" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
         </CvMappingRule>
 
-        <CvMappingRule id="DatabaseFiltersInclude_may_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/Filter/Include/cvParam/@accession" requirementLevel="MAY" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/Filter/Include" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="DatabaseFiltersInclude_may_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/filter/include/cvParam/@accession" requirementLevel="MAY" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/filter/include" cvTermsCombinationLogic="OR">
             <CvTerm termAccession="MS:1001512" useTermName="false" useTerm="false" termName="Sequence database filters" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
         </CvMappingRule>
 
-        <CvMappingRule id="DatabaseFiltersExclude_may_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/Filter/Exclude/cvParam/@accession" requirementLevel="MAY" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/Filter/Exclude" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="DatabaseFiltersExclude_may_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/filter/exclude/cvParam/@accession" requirementLevel="MAY" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseFilters/filter/exclude" cvTermsCombinationLogic="OR">
             <CvTerm termAccession="MS:1001512" useTermName="false" useTerm="false" termName="Sequence database filters" isRepeatable="true" allowChildren="true" cvIdentifierRef="MS" />
         </CvMappingRule>
 
-        <CvMappingRule id="DatabaseTranslationTranslationTable_must_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/TranslationTable/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/TranslationTable" cvTermsCombinationLogic="OR">
+        <CvMappingRule id="DatabaseTranslationTranslationTable_must_rule" cvElementPath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/translationTable/cvParam/@accession" requirementLevel="MUST" scopePath="/MzIdentML/AnalysisProtocolCollection/SpectrumIdentificationProtocol/databaseTranslation/translationTable" cvTermsCombinationLogic="OR">
             <CvTerm termAccession="MS:1001025" useTermName="false" useTerm="true" termName="translation table" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
 			<CvTerm termAccession="MS:1001410" useTermName="false" useTerm="true" termName="translation start codons" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />
             <CvTerm termAccession="MS:1001423" useTermName="false" useTerm="true" termName="translation table description" isRepeatable="false" allowChildren="false" cvIdentifierRef="MS" />

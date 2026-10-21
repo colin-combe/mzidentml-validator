@@ -34,6 +34,8 @@ public class AdditionalSearchParamsObjectRule extends AObjectRule<SpectrumIdenti
     public static boolean bIsConsensusScoring                   = false;
     public static boolean bIsSamplePreFractionation             = false;
     public static boolean bIsCrossLinkingSearch                 = false;
+    /** mzIdentML 1.3.0: peptides reported as associated without a cross-linker (MS:1003330). */
+    public static boolean bIsNoncovalentAssociationSearch       = false;
     public static boolean bIsNoSpecialProcessing                = false;
     
     private boolean bThresholdFoundForModPositionScoring = false;
@@ -103,6 +105,10 @@ public class AdditionalSearchParamsObjectRule extends AObjectRule<SpectrumIdenti
                         case "MS:1002635":  // proteogenomics search
                             cnt++;
                             bIsProteoGenomicsSearch = true;
+                            break;
+                        case "MS:1003330":  // noncovalently associated peptides search (1.3.0)
+                            cnt++;
+                            bIsNoncovalentAssociationSearch = true;
                             break;
                         case "MS:1002495":  // no special processing
                             cnt++;

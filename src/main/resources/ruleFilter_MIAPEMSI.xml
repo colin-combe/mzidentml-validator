@@ -33,8 +33,16 @@
 			</userOption>
 		</userCondition>
 	</userConditions>
-    <!-- Rule filter for de novo search -->
+	<!--
+	ruleFilter_v1.4.xsd allows a single ruleConditions element holding any number of ruleCondition
+	children. This file used to carry one ruleConditions element per search type, which the schema
+	does not allow: JAXB keeps only the last of them, so every condition but the cross-linking one
+	was silently dropped - leaving, among others, SpectrumIdentificationItemNullPeptideEvidenceRefObjectRule
+	active for files that are not de novo searches. All the conditions now live in the one element
+	the schema defines.
+	-->
 	<ruleConditions>
+		<!-- de novo search -->
 		<ruleCondition valid="true" id="DenovoSearchType_may_rule">
 			<ruleToSkip id="DenovoSearchType_may_rule"/>
 			<ruleToSkip id="SpectrumIdentificationItemPeptideEvidenceRefObjectRule"/>
@@ -43,9 +51,9 @@
 			<ruleToSkip id="SpectrumIdentificationItemNullPeptideEvidenceRefObjectRule"/>
 			<ruleToSkip id="DenovoSearchType_may_rule"/> <!-- discard its error messages -->
 		</ruleCondition>	
-	</ruleConditions>
-    <!-- Rule filter for spectral library search -->
-	<ruleConditions>
+	
+
+		<!-- spectral library search -->
 		<ruleCondition valid="true" id="SpectralLibrarySearchType_may_rule">
 			<ruleToSkip id="SpectralLibrarySearchType_may_rule"/>
 			<ruleToSkip id="SpectrumIdentificationItemPeptideEvidenceRefObjectRule"/>
@@ -54,9 +62,9 @@
 			<ruleToSkip id="SpectrumIdentificationItemNullPeptideEvidenceRefObjectRule"/>
 			<ruleToSkip id="SpectralLibrarySearchType_may_rule"/> <!-- discard its error messages -->
 		</ruleCondition>	
-	</ruleConditions>
-    <!-- Rule filter for peptide-level scoring -->
-	<ruleConditions>
+	
+
+		<!-- peptide-level scoring -->
 		<ruleCondition valid="true" id="PeptideLevelStatsSearchType_may_rule">
 			<ruleToSkip id="PeptideLevelStatsSearchType_may_rule"/>
 		</ruleCondition>
@@ -64,9 +72,9 @@
 			<ruleToSkip id="PeptideLevelStatsSpectrumIdentificationItem_must_rule"/>
 			<ruleToSkip id="PeptideLevelStatsSearchType_may_rule"/> <!-- discard its error messages -->
 		</ruleCondition>	
-	</ruleConditions>
-    <!-- Rule filter for modification location scoring -->
-	<ruleConditions>
+	
+
+		<!-- modification location scoring -->
 		<ruleCondition valid="true" id="ModLocalizationSearchType_may_rule">
 			<ruleToSkip id="ModLocalizationSearchType_may_rule"/>
 		</ruleCondition>
@@ -74,9 +82,9 @@
 			<ruleToSkip id="ModLocalizationSpectrumIdentificationItem_must_rule"/>
 			<ruleToSkip id="ModLocalizationSearchType_may_rule"/> <!-- discard its error messages -->
 		</ruleCondition>	
-	</ruleConditions>
-    <!-- Rule filter for proteogenomics search -->
-	<ruleConditions>
+	
+
+		<!-- proteogenomics search -->
 		<ruleCondition valid="true" id="ProteogenomicsSearchType_may_rule">
 			<ruleToSkip id="ProteogenomicsSearchType_may_rule"/>
 		</ruleCondition>
@@ -85,9 +93,9 @@
 			<ruleToSkip id="ProteogenomicsDBSequence_must_rule"/> <!-- discard its error messages -->
 			<ruleToSkip id="ProteogenomicsPeptideEvidence_must_rule"/> <!-- discard its error messages -->
 		</ruleCondition>	
-	</ruleConditions>
-    <!-- Rule filter for cross-linking search -->
-	<ruleConditions>
+	
+
+		<!-- cross-linking search -->
 		<ruleCondition valid="true" id="CrosslinkingSearchType_may_rule">
 			<ruleToSkip id="CrosslinkingSearchType_may_rule"/>
 		</ruleCondition>
@@ -95,6 +103,7 @@
 			<ruleToSkip id="CrosslinkingSearchType_may_rule"/>
 			<ruleToSkip id="CrosslinkingPeptideModification_may_rule"/> <!-- discard its error messages -->
 		</ruleCondition>	
+	
 	</ruleConditions>
 	<!-- Mandatorily required elements -->
 	<mandatoryElements>

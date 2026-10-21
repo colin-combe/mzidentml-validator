@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    jmzidentml and psi-tools log copiously at DEBUG through slf4j, and logback-classic
+    falls back to DEBUG on the root logger when it finds no configuration on the
+    classpath. No dependency ships one, so a command line run buried its own report:
+    validating a 133 KB file wrote 53,380 lines, of which 8 were the result.
+
+    The report is written to stdout directly rather than through a logger, so raising
+    the threshold hides none of it. Logging goes to stderr so that redirecting stdout
+    captures the report alone.
+-->
+<configuration>
+    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="WARN">
+        <appender-ref ref="STDERR"/>
+    </root>
+</configuration>

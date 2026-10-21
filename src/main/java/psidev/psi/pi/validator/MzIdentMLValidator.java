@@ -46,7 +46,7 @@ import uk.ac.ebi.jmzidml.model.mzidml.SpectrumIdentificationItem;
 import uk.ac.ebi.jmzidml.xml.io.MzIdentMLUnmarshaller;
 
 /**
- * @author Florian Reisinger Date: 25-Oct-2010 modified by Salvador Martínez, Gerhard Mayer
+ * @author Florian Reisinger Date: 25-Oct-2010 modified by Salvador Martï¿½nez, Gerhard Mayer
  * @since $version
  */
 public class MzIdentMLValidator extends Validator {
@@ -64,6 +64,8 @@ public class MzIdentMLValidator extends Validator {
     private static final String DOUBLE_TAB = TAB + TAB;
     private static final String NEW_LINE_DOUBLE_TAB = NEW_LINE + DOUBLE_TAB;
     private final String STR_ELLIPSIS = "...";
+    /** Empty string; the GUI has one of its own, but reaching for it throws when there is no GUI. */
+    private static final String STR_EMPTY = "";
     private static int progressSteps = 64;
 
     private final String STR_FILE_EXT_GZ    = ".gz";
@@ -74,7 +76,32 @@ public class MzIdentMLValidator extends Validator {
      * Enums.
      */
     public enum MzIdVersion {
-        _1_1, _1_2
+        _1_1, _1_2, _1_3
+    }
+
+    /** Schema versions the -x command line option accepts, in ascending order. */
+    private static final List<String> SUPPORTED_SCHEMA_VERSIONS = Arrays.asList("1.1.0", "1.1.1", "1.2.0", "1.3.0");
+
+    /** Exit codes of the command line tool: no messages / messages reported / could not validate. */
+    private static final int EXIT_CODE_VALID    = 0;
+    private static final int EXIT_CODE_MESSAGES = 1;
+    private static final int EXIT_CODE_ERROR    = 2;
+
+    private static final String NO_SCHEMA_VERSION_MSG =
+        "Error, if schema file is not provided, a version of the schema must be provided: "
+        + String.join(", ", SUPPORTED_SCHEMA_VERSIONS);
+
+    /**
+     * Checks if the version of the file currently being validated is at least the given one.
+     * Declared in ascending order, so {@link MzIdVersion} ordinals compare as versions do.
+     * Newer versions inherit the checks introduced for older ones.
+     *
+     * @param minVersion the lowest {@link MzIdVersion} the check applies to
+     * @return false if the current file version is unknown (null) or older than minVersion
+     */
+    public static boolean isVersionAtLeast(MzIdVersion minVersion) {
+        return MzIdentMLValidator.currentFileVersion != null
+            && MzIdentMLValidator.currentFileVersion.ordinal() >= minVersion.ordinal();
     }
 
     /**
@@ -91,6 +118,13 @@ public class MzIdentMLValidator extends Validator {
     private MzIdentMLUnmarshaller unmarshaller = null;
     private RuleFilterManager ruleFilterManager;
     private ExtendedValidatorReport extendedReport;
+
+    /** Which rule files to load when there is no GUI to ask; only used if gui == null. */
+    private ValidationRuleFiles.ValidationKind validationKind = ValidationRuleFiles.ValidationKind.SEMANTIC;
+
+    /** Rule files explicitly named by the caller; they take precedence over the ones of the file version. */
+    private File cvMappingRuleFileOverride = null;
+    private File objectRuleFileOverride = null;
 
     public static MzIdVersion currentFileVersion = null;
 
@@ -177,6 +211,28 @@ public class MzIdentMLValidator extends Validator {
     }
 
     /**
+     * Sets the kind of validation whose rule files are to be loaded for the version of the file
+     * being validated. Only used when the validator runs without a GUI, e.g. on the command line.
+     *
+     * @param aValidationKind semantic or MIAPE validation
+     */
+    public void setValidationKind(ValidationRuleFiles.ValidationKind aValidationKind) {
+        this.validationKind = aValidationKind;
+    }
+
+    /**
+     * Sets rule files to use instead of the ones configured for the version of the file being
+     * validated. A null argument means: use the rule file matching the file version.
+     *
+     * @param aCvMappingRuleFile the cv-mapping rule file, or null
+     * @param aObjectRuleFile the object rule file, or null
+     */
+    public void setRuleFileOverrides(File aCvMappingRuleFile, File aObjectRuleFile) {
+        this.cvMappingRuleFileOverride = aCvMappingRuleFile;
+        this.objectRuleFileOverride = aObjectRuleFile;
+    }
+
+    /**
      * Resets the counters and the GUI.
      *
      */
@@ -201,6 +257,7 @@ public class MzIdentMLValidator extends Validator {
         AdditionalSearchParamsObjectRule.bIsConsensusScoring = false;
         AdditionalSearchParamsObjectRule.bIsSamplePreFractionation = false;
         AdditionalSearchParamsObjectRule.bIsCrossLinkingSearch = false;
+        AdditionalSearchParamsObjectRule.bIsNoncovalentAssociationSearch = false;
         AdditionalSearchParamsObjectRule.bIsNoSpecialProcessing = false;
     }
 
@@ -237,6 +294,8 @@ public class MzIdentMLValidator extends Validator {
                 return this.getMzIdentMLSchema("mzIdentML1.1.0.xsd", "url.schema.1.1.0");
             case _1_2:
                 return this.getMzIdentMLSchema("mzIdentML1.2.0.xsd", "url.schema.1.2.0");
+            case _1_3:
+                return this.getMzIdentMLSchema("mzIdentML1.3.0.xsd", "url.schema.1.3.0");
             default:
                 throw new ValidatorException("Not supported mzIdentML version: " + version);
         }
@@ -422,11 +481,11 @@ public class MzIdentMLValidator extends Validator {
         String unzippedPath;
         
         if (xmlFile.getName().endsWith(this.STR_FILE_EXT_GZ)) {
-            unzippedPath = xmlFile.getPath().replace(this.STR_FILE_EXT_GZ, this.gui.STR_EMPTY);
+            unzippedPath = xmlFile.getPath().replace(this.STR_FILE_EXT_GZ, STR_EMPTY);
             xmlFile = this.unzipXMLFile(xmlFile, unzippedPath, this.STR_FILE_EXT_GZ);
         }
         else if (xmlFile.getName().endsWith(this.STR_FILE_EXT_ZIP)) {
-            unzippedPath = xmlFile.getPath().replace(this.STR_FILE_EXT_ZIP, this.gui.STR_EMPTY);
+            unzippedPath = xmlFile.getPath().replace(this.STR_FILE_EXT_ZIP, STR_EMPTY);
             xmlFile = this.unzipXMLFile(xmlFile, unzippedPath, this.STR_FILE_EXT_ZIP);
         }
         
@@ -438,7 +497,18 @@ public class MzIdentMLValidator extends Validator {
             this.initGuiProgress();
 
             this.updateProgress("Indexing input file" + this. STR_ELLIPSIS);
-            this.unmarshaller = new MzIdentMLUnmarshaller(xmlFile);
+            try {
+                this.unmarshaller = new MzIdentMLUnmarshaller(xmlFile);
+            }
+            catch (IllegalStateException ise) {
+                // jmzidentml rejects any version it does not know. Report it rather than let the
+                // exception escape: in the GUI it runs on a SwingWorker thread with no handler,
+                // which would leave the progress bar spinning forever.
+                this.LOGGER.error("Could not index the input file.", ise);
+                return this.getInvalidOrEmptyFileErrorMessages(xmlFile,
+                    " declares an mzIdentML version that is not supported. Supported versions are "
+                    + String.join(", ", SUPPORTED_SCHEMA_VERSIONS) + ".");
+            }
             String mzIdentMLVersion = this.unmarshaller.getMzIdentMLVersion();
 
             // flag if the version has changed
@@ -687,23 +757,26 @@ public class MzIdentMLValidator extends Validator {
         this.LOGGER.info("Loading configuration files");
         this.updateProgress("Loading configuration files" + this. STR_ELLIPSIS);
 
-        if (this.gui != null) {
-            try {
-                final InputStream objectRuleInputStream = this.gui.getRuleFileInputStream(MzIdentMLValidator.currentFileVersion, this.gui.STR_OBJECT);
-                final InputStream mappingRuleInputStream = this.gui.getRuleFileInputStream(MzIdentMLValidator.currentFileVersion, this.gui.STR_MAPPING);
-                
-                this.setCvMappingRules(mappingRuleInputStream);
-                this.setObjectRules(objectRuleInputStream);
-            }
-            catch (IOException e) {
-                throw new ValidatorException("Error loading configuration files.", e);
-            }
-            catch (CvRuleReaderException e) {
-                throw new ValidatorException("Error loading cvMapping rules.", e);
-            }
+        // Without a GUI the kind of validation (semantic or MIAPE) comes from this.validationKind,
+        // so command line runs pick their rules from the version of the file just like the GUI does.
+        final ValidationRuleFiles.ValidationKind kind = (this.gui != null) ? this.gui.getValidationKind() : this.validationKind;
+
+        try {
+            final InputStream objectRuleInputStream = (this.objectRuleFileOverride != null)
+                ? new FileInputStream(this.objectRuleFileOverride)
+                : ValidationRuleFiles.getRuleFileInputStream(MzIdentMLValidator.currentFileVersion, ValidationRuleFiles.STR_OBJECT, kind);
+            final InputStream mappingRuleInputStream = (this.cvMappingRuleFileOverride != null)
+                ? new FileInputStream(this.cvMappingRuleFileOverride)
+                : ValidationRuleFiles.getRuleFileInputStream(MzIdentMLValidator.currentFileVersion, ValidationRuleFiles.STR_MAPPING, kind);
+
+            this.setCvMappingRules(mappingRuleInputStream);
+            this.setObjectRules(objectRuleInputStream);
         }
-        else {
-            throw new ValidatorException("No GUI has been specified, which is needed to know which type of validation (semantic or MIAPE) is going to be performed.");
+        catch (IOException e) {
+            throw new ValidatorException("Error loading configuration files.", e);
+        }
+        catch (CvRuleReaderException e) {
+            throw new ValidatorException("Error loading cvMapping rules.", e);
         }
     }
 
@@ -776,14 +849,18 @@ public class MzIdentMLValidator extends Validator {
      * @param mzIdentMLVersion
      * @return the mzid version
      */
-    private MzIdVersion getMzIdentMLVersion(String mzIdentMLVersion) {
+    private static MzIdVersion getMzIdentMLVersion(String mzIdentMLVersion) {
         switch (mzIdentMLVersion) {
             case "1.1.0":
+            case "1.1.1":
             case "1.1":
                 return MzIdentMLValidator.MzIdVersion._1_1;
             case "1.2.0":
             case "1.2":
                 return MzIdentMLValidator.MzIdVersion._1_2;
+            case "1.3.0":
+            case "1.3":
+                return MzIdentMLValidator.MzIdVersion._1_3;
         }
         
         return null;
@@ -867,7 +944,7 @@ public class MzIdentMLValidator extends Validator {
         }
         objectRulesChecked = this.checkElementObjectRule(MzIdentMLElement.SpectrumIdentificationItem);
 
-        if (MzIdentMLValidator.currentFileVersion == MzIdentMLValidator.MzIdVersion._1_2) {
+        if (MzIdentMLValidator.isVersionAtLeast(MzIdentMLValidator.MzIdVersion._1_2)) {
             this.checkElementObjectRule(MzIdentMLElement.DBSequence);
             //this.checkElementObjectRule(MzIdentMLElement.SpectrumIdentificationList);
             objectRulesChecked = this.checkElementObjectRule(MzIdentMLElement.SpectrumIdentificationResult);
@@ -907,7 +984,7 @@ public class MzIdentMLValidator extends Validator {
     private String getXLInteractionScoreMsg(ImmutablePair<String, String> key, HashMap<String, String> pagID2PDHID_Map) {
         StringBuilder strB = new StringBuilder();
         
-        StringBuilder pagIDs_pdhIDs = new StringBuilder(this.gui.STR_EMPTY);
+        StringBuilder pagIDs_pdhIDs = new StringBuilder(STR_EMPTY);
         String pdhID;
         for (String pagID : pagID2PDHID_Map.keySet()) {
             pdhID = pagID2PDHID_Map.get(pagID);
@@ -962,14 +1039,14 @@ public class MzIdentMLValidator extends Validator {
         this.checkElementCvMapping(MzIdentMLElement.SpectrumIdentificationList);    // this includes SIR and SII
         this.checkElementCvMapping(MzIdentMLElement.FragmentationTable);
         this.checkElementCvMapping(MzIdentMLElement.Measure);
-        if (MzIdentMLValidator.currentFileVersion == MzIdentMLValidator.MzIdVersion._1_2) {
+        if (MzIdentMLValidator.isVersionAtLeast(MzIdentMLValidator.MzIdVersion._1_2)) {
             this.checkElementCvMapping(MzIdentMLElement.ProteinDetectionList);
         }
         this.checkElementCvMapping(MzIdentMLElement.ProteinAmbiguityGroup);
         // disabled because is included in the SIL
         // this.checkElementCvMapping(MzIdentMLElement.SpectrumIdentificationResult);
         
-        if (MzIdentMLValidator.currentFileVersion == MzIdentMLValidator.MzIdVersion._1_2) {
+        if (MzIdentMLValidator.isVersionAtLeast(MzIdentMLValidator.MzIdVersion._1_2)) {
             this.checkElementCvMapping(MzIdentMLElement.ProteinDetectionHypothesis);
         }
         
@@ -1062,7 +1139,7 @@ public class MzIdentMLValidator extends Validator {
         }
 
         // Special handling: Now check the results for the cross-linking case
-        if (MzIdentMLValidator.currentFileVersion == MzIdentMLValidator.MzIdVersion._1_2) {
+        if (MzIdentMLValidator.isVersionAtLeast(MzIdentMLValidator.MzIdVersion._1_2)) {
             if (AdditionalSearchParamsObjectRule.bIsCrossLinkingSearch) {
                 if (element.getClazz().getName().endsWith("SpectrumIdentificationResult")) {
                     objectRuleResult.addAll(XLinkSIIObjectRule.checkRulesWithHashMapContent());
@@ -1213,7 +1290,7 @@ public class MzIdentMLValidator extends Validator {
             else {
                 if (errorHandler != null) {
                     errorHandler.getErrorsAsValidatorMessages().forEach((validatorMessage) -> {
-                        String ruleId = this.gui.STR_EMPTY;
+                        String ruleId = STR_EMPTY;
                         Rule rule = validatorMessage.getRule();
                         if (rule != null) {
                             ruleId = rule.getId();
@@ -1667,11 +1744,18 @@ public class MzIdentMLValidator extends Validator {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        System.exit(MzIdentMLValidator.runCommandLine(args));
+    }
 
-
+    /**
+     * Runs a command line validation.
+     * @param args the command line arguments
+     * @return {@link #EXIT_CODE_VALID}, {@link #EXIT_CODE_MESSAGES} or {@link #EXIT_CODE_ERROR}
+     */
+    private static int runCommandLine(String[] args) {
         Options options = createValidatorOptions();
 
-        String header = "mzidentml-validator version 1.4.35\n\n";
+        String header = "mzidentml-validator version 1.4.36-SNAPSHOT\n\n";
         String footer = "\nPlease report issues at https://github.com/ypriverol/mzidentml-validator/issues";
 
         HelpFormatter formatter = new HelpFormatter();
@@ -1681,8 +1765,10 @@ public class MzIdentMLValidator extends Validator {
         CommandLineParser parser = new DefaultParser();
         try {
             CommandLine cmd = parser.parse( options, args);
-            if(!cmd.hasOption("s") && !cmd.hasOption("e") || (!cmd.hasOption("f")))
+            if(!cmd.hasOption("s") && !cmd.hasOption("e") || (!cmd.hasOption("f"))) {
                 formatter.printHelp("mzidentml-validator", header, options, footer, true);
+                return EXIT_CODE_ERROR;
+            }
 
             if(cmd.hasOption("s")){
                 MzIdentMLSchemaValidator validator = new MzIdentMLSchemaValidator();
@@ -1697,21 +1783,21 @@ public class MzIdentMLValidator extends Validator {
                     }
                 } else if (cmd.hasOption("x")) {
                     String version = cmd.getOptionValue("x");
-                    if(!Objects.equals(version, "1.1.0") && !Objects.equals(version, "1.1.1") && !Objects.equals(version, "1.2.0")){
-                        System.err.println("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
-                        throw new IOException("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
+                    if (!SUPPORTED_SCHEMA_VERSIONS.contains(version)) {
+                        System.err.println(NO_SCHEMA_VERSION_MSG);
+                        throw new IOException(NO_SCHEMA_VERSION_MSG);
                     }
                     String fileSchemaName = String.format("mzIdentML%s.xsd", version);
                     defaultStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(fileSchemaName);
                 }else {
-                    System.err.println("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
-                    throw new IOException("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
+                    System.err.println(NO_SCHEMA_VERSION_MSG);
+                    throw new IOException(NO_SCHEMA_VERSION_MSG);
                 }
 
                 // Set the schema.
                 if(defaultStream == null && schemaFile == null){
-                    System.err.println("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
-                    throw new IOException("Error, if schema file is not provided, a version of the schema must be provided: 1.1.0, 1.1.1 or 1.2.0");
+                    System.err.println(NO_SCHEMA_VERSION_MSG);
+                    throw new IOException(NO_SCHEMA_VERSION_MSG);
                 }
                 if(schemaFile != null)
                     validator.setSchema(schemaFile.toURI());
@@ -1723,7 +1809,8 @@ public class MzIdentMLValidator extends Validator {
                 System.out.println(TRIPLE_NEW_LINE + "  - Validating file '" + inputFile.getAbsolutePath() + "'...");
                 br = new BufferedReader(new FileReader(inputFile));
                 MzIdentMLValidationErrorHandler xveh = validator.validateReader(br);
-                if (xveh.noErrors()) {
+                boolean bValid = xveh.noErrors();
+                if (bValid) {
                     System.out.println("File is valid!");
                 }else {
                     System.out.println("* Errors detected: ");
@@ -1732,44 +1819,35 @@ public class MzIdentMLValidator extends Validator {
                 br.close();
                 System.out.println(NEW_LINE + "All done!" + NEW_LINE);
 
+                return bValid ? EXIT_CODE_VALID : EXIT_CODE_MESSAGES;
+
             } else if(cmd.hasOption("e")){
                 // Validate existence of input files.
                 File inputFile = new File(cmd.getOptionValue("f"));
 
-                InputStream ontology = null;
+                final ValidationRuleFiles.ValidationKind validationKind = cmd.hasOption("p")
+                    ? ValidationRuleFiles.ValidationKind.MIAPE
+                    : ValidationRuleFiles.ValidationKind.SEMANTIC;
+
+                // The bundled OBO files are used unless remote (OLS) ontologies were asked for,
+                // so that a validation run neither needs the network nor changes with it.
+                InputStream ontology;
                 if(cmd.hasOption("o")){
-                    File ontologyFile = checkFileExistence(cmd.getOptionValue("o"), "ontology config");
-                    if(ontologyFile.exists())
-                        ontology = new FileInputStream(ontologyFile);
+                    ontology = new FileInputStream(checkFileExistence(cmd.getOptionValue("o"), "ontology config"));
                 }else
-                    ontology = Thread.currentThread().getContextClassLoader().getResourceAsStream("ontologies.xml");
+                    ontology = ValidationRuleFiles.getOntologiesInputStream(
+                        cmd.hasOption("R") ? "ols.ontologies.file" : "local.ontologies.file");
 
-                InputStream cvMappingStream = null;
-                if(cmd.hasOption("m")){
-                    File cvMapping = checkFileExistence(cmd.getOptionValue("m"), "CV mapping config");
-                    if(cvMapping.exists())
-                        cvMappingStream = new FileInputStream(cvMapping);
-                }else
-                    cvMappingStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("mzIdentML-mapping_1.1.0.xml");
+                // A rule file left unnamed is chosen from the version the file declares, see
+                // loadRulesByMzIdentVersion(); passing -m/-r overrides that for any version.
+                File cvMappingFile = cmd.hasOption("m") ? checkFileExistence(cmd.getOptionValue("m"), "CV mapping config") : null;
+                File objectRulesFile = cmd.hasOption("r") ? checkFileExistence(cmd.getOptionValue("r"), "object rules config") : null;
 
-
-                InputStream objectRulesStream = null;
-                if(cmd.hasOption("r")){
-                    File cvMapping = checkFileExistence(cmd.getOptionValue("r"), "object rules config");
-                    if(cvMapping.exists())
-                        objectRulesStream = new FileInputStream(cvMapping);
-                }else
-                    objectRulesStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("ObjectRulesMIAPE.1.1.0.xml");
-
-
-
-                InputStream filterStream = null;
+                InputStream filterStream;
                 if(cmd.hasOption("t")){
-                    File cvMapping = checkFileExistence(cmd.getOptionValue("t"), "rule filter");
-                    if(cvMapping.exists())
-                        filterStream = new FileInputStream(cvMapping);
+                    filterStream = new FileInputStream(checkFileExistence(cmd.getOptionValue("t"), "rule filter"));
                 }else
-                    filterStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("ruleFilter_MIAPEMSI.xml");
+                    filterStream = ValidationRuleFiles.getRuleFilterInputStream(validationKind);
 
 
                 // Validate message level.
@@ -1784,26 +1862,42 @@ public class MzIdentMLValidator extends Validator {
 
                 RuleFilterManager ruleFilterManager = new RuleFilterManager(filterStream);
 
-                validator = new MzIdentMLValidator(ontology, cvMappingStream, objectRulesStream, null);
+                validator = new MzIdentMLValidator(ontology, null);
+                validator.setValidationKind(validationKind);
+                validator.setRuleFileOverrides(cvMappingFile, objectRulesFile);
                 validator.setMessageReportLevel(msgLevel);
                 validator.setRuleFilterManager(ruleFilterManager);
 
                 Collection<ValidatorMessage> msgs = validator.startValidation(inputFile);
-                if (msgs != null) {
-                    messages.addAll(msgs);
-                    System.out.println(validator.getValidatorMessages(messages));
-                    System.out.println(NEW_LINE);
-                    System.out.println(validator.getStatisticsReport(messages.size()));
-                    System.out.println(NEW_LINE);
-                    System.out.println(validator.getCvContextReport());
-                    System.out.println(DOUBLE_NEW_LINE + "All done. Goodbye.");
+                if (msgs == null) {
+                    System.err.println("The validation of '" + inputFile.getAbsolutePath() + "' did not produce a report.");
+                    return EXIT_CODE_ERROR;
                 }
+
+                messages.addAll(msgs);
+                System.out.println(validator.getValidatorMessages(messages));
+                System.out.println(NEW_LINE);
+                System.out.println(validator.getStatisticsReport(messages.size()));
+                System.out.println(NEW_LINE);
+                System.out.println(validator.getCvContextReport());
+                System.out.println(DOUBLE_NEW_LINE + "All done. Goodbye.");
+
+                return messages.isEmpty() ? EXIT_CODE_VALID : EXIT_CODE_MESSAGES;
             }
+
+            return EXIT_CODE_VALID;
         } catch (FileNotFoundException | JAXBException | OntologyLoaderException | ParseException e) {
             formatter.printHelp("mzidentml-validator", header, options, footer, true);
             e.printStackTrace(System.err);
+            return EXIT_CODE_ERROR;
         } catch (IOException | SAXException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace(System.err);
+            return EXIT_CODE_ERROR;
+        } catch (RuntimeException e) {
+            // A rule blowing up must not be reported as a clean run or as validation findings.
+            System.err.println("The validation could not be completed:");
+            e.printStackTrace(System.err);
+            return EXIT_CODE_ERROR;
         } finally {
             try {
                 if (br != null) {
@@ -1829,7 +1923,7 @@ public class MzIdentMLValidator extends Validator {
                         .option("x")
                         .longOpt("schema_version")
                         .hasArg(true)
-                        .desc("Schema version, supported values 1.1.0, 1.1.1, 1.2.0")
+                        .desc("Schema version, supported values " + String.join(", ", SUPPORTED_SCHEMA_VERSIONS))
                 .build());
         options.addOption(Option.builder()
                         .option("w")
@@ -1880,6 +1974,18 @@ public class MzIdentMLValidator extends Validator {
                         .longOpt("error_level")
                         .desc("The error level of the validation process")
                         .hasArg(true)
+                .build());
+        options.addOption(Option.builder()
+                        .option("p")
+                        .longOpt("miape_validation")
+                        .hasArg(false)
+                        .desc("Use the MIAPE rule files instead of the semantic ones")
+                .build());
+        options.addOption(Option.builder()
+                        .option("R")
+                        .longOpt("remote_ontologies")
+                        .hasArg(false)
+                        .desc("Look the ontologies up in OLS instead of using the bundled OBO files")
                 .build());
         return options;
     }

@@ -2,6 +2,11 @@ package psidev.psi.pi.validator;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -9,12 +14,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Properties;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -23,6 +26,7 @@ import javax.swing.SpinnerModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.SimpleAttributeSet;
@@ -65,11 +69,8 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
      */
     private static final Logger LOGGER  = LogManager.getLogger(MzIdentMLValidatorGUI.class);
     private static final String NEW_LINE    = System.getProperty("line.separator");
-    private static final String STR_FILE_SEPARATOR  = System.getProperty("file.separator");
-    private static final String STR_RESOURCE_FOLDER = System.getProperty("user.dir") + STR_FILE_SEPARATOR + "resources" + STR_FILE_SEPARATOR;
     private static final String STR_ELLIPSIS= "...";
     private static final String DEFAULT_PROGRESS_MESSAGE    = "Select a file and press validate" + STR_ELLIPSIS;
-    private static final String STR_VALIDATION_PROPERTIES   = "validation.properties";
     private static final String STR_LAF_WINDOWS    = "Windows";
     
     private final String STR_4_INDENTATION  = "    ";
@@ -77,7 +78,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     private final int DEFAULT_MAX_NUMBER_TO_REPORT_SAME_MESSAGE = 1;
     private static final int EXIT_SUCCESS = 0;
     public static final int EXIT_FAILURE  = -1;
-    private final ClassLoader cl;
+    private static final int TITLE_TEXT_INSET = 5;    // TitledBorder.TEXT_INSET_H, which is private
    
     private final String STR_FILE_EXT_MZID_GZ   = ".mzid.gz";
     private final String STR_FILE_EXT_MZID_ZIP  = ".mzid.zip";
@@ -86,8 +87,8 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     private final String STR_FILE_EXT_7Z        = ".7z";
     public final String STR_EMPTY       = "";
     
-    public final String STR_MAPPING    = "mapping";
-    public final String STR_OBJECT     = "object";
+    public final String STR_MAPPING    = ValidationRuleFiles.STR_MAPPING;
+    public final String STR_OBJECT     = ValidationRuleFiles.STR_OBJECT;
     public final String COLOR_RED      = "red";
     public final String COLOR_ORANGE   = "orange";
     public final String COLOR_GREEN    = "green";
@@ -115,9 +116,42 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
      */
     public MzIdentMLValidatorGUI() {
         this.initComponents();
+        this.widenPanelsToFitTitles(this);
         this.enableRadioButtons(false);
         this.setSpinnerModel();
-        this.cl = this.getClass().getClassLoader();
+    }
+
+    /**
+     * Widens every panel whose titled border caption is wider than the panel itself.
+     * A layout manager sizes a panel from its contents and ignores the width its
+     * TitledBorder caption needs, so long captions are silently truncated - and by how
+     * much depends on the look and feel's font metrics. Called on the whole tree rather
+     * than on named panels so it keeps holding for edited captions and new panels.
+     * @param container the container whose descendants are to be checked
+     */
+    private void widenPanelsToFitTitles(Container container) {
+        // depth first: a parent's preferred width can only be measured once its children are final
+        for (Component child : container.getComponents()) {
+            if (child instanceof Container) {
+                this.widenPanelsToFitTitles((Container) child);
+            }
+        }
+
+        if (!(container instanceof JComponent)) {
+            return;
+        }
+        JComponent panel = (JComponent) container;
+        if (!(panel.getBorder() instanceof TitledBorder)) {
+            return;
+        }
+
+        // TitledBorder paints the caption inset by TEXT_INSET_H at either end but leaves that out
+        // of its own getMinimumSize(), so add it back - without it the last characters still clip
+        int titleWidth = ((TitledBorder) panel.getBorder()).getMinimumSize(panel).width + 2 * TITLE_TEXT_INSET;
+        if (panel.getPreferredSize().width < titleWidth) {
+            panel.setPreferredSize(new Dimension(titleWidth, panel.getPreferredSize().height));
+            panel.setMinimumSize(new Dimension(titleWidth, panel.getMinimumSize().height));
+        }
     }
 
     /**
@@ -173,10 +207,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
         jTextField1.setText("jTextField1");
 
         setAutoscrolls(true);
-        setMaximumSize(new java.awt.Dimension(1200, 1980));
-        setMinimumSize(new java.awt.Dimension(768, 800));
         setName("MzIdentMLValidator-GUI"); // NOI18N
-        setPreferredSize(new java.awt.Dimension(900, 1024));
 
         jPanel1.setBorder(javax.swing.BorderFactory.createTitledBorder("File selection"));
 
@@ -350,7 +381,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
                 .addContainerGap()
                 .addComponent(jPanel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(18, 18, 18)
-                .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, 165, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jPanel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addGap(18, 18, 18)
                 .addComponent(jPanel10, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
@@ -374,9 +405,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
         );
         jPanel5Layout.setVerticalGroup(
             jPanel5Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel5Layout.createSequentialGroup()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 627, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 29, Short.MAX_VALUE))
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 627, Short.MAX_VALUE)
         );
 
         jPanel6.setBorder(javax.swing.BorderFactory.createTitledBorder("Progress"));
@@ -526,8 +555,8 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel6, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jPanel5, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -770,138 +799,56 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
     /**
      * Gets the file name/path of the ontologies file.<br>
      * Note: If found in the folder where application has launched it overrides the default files.
-     * 
-     * @param ontologyPropertyName can take the values: ontologies.file or local.ontologies.file
+     *
+     * @param ontologyPropertyName can take the values: ols.ontologies.file or local.ontologies.file
      * @return InputStream for the ontologies file
      */
     private InputStream getOntologiesFileInputStream(String ontologyPropertyName) throws IOException {
-        String ontologiesFile = MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER + MzIdentMLValidatorGUI.getProperty(ontologyPropertyName);
-        File file = new File(ontologiesFile);
-
-        // check if the file exists. If not, return the path
-        if (!file.exists()) {
-            MzIdentMLValidatorGUI.LOGGER.debug("ontologiesFile does not exist: " + ontologiesFile);
-            return Thread.currentThread().getContextClassLoader().getResourceAsStream("ontologies.xml");
-        }
-
-        return Files.newInputStream(file.toPath());
+        return ValidationRuleFiles.getOntologiesInputStream(ontologyPropertyName);
     }
 
     /**
      * Gets the file name/path of the rule filter file.<br>
      * Note: If found in the folder where application has launched it overrides the default files.
-     * 
+     *
      * @return InputStream for the MIAPE rule filter file
      */
     private InputStream getMIAPEValidationRuleFilterInputStream() throws IOException {
-        String ruleFilterFileName = MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER + MzIdentMLValidatorGUI.getProperty("miape.filter.rule.file");
-        File file = new File(ruleFilterFileName);
-
-        // check if the file exists. If not, return the path
-        if (!file.exists()) {
-            MzIdentMLValidatorGUI.LOGGER.debug("ruleFilterFileName does not exist: " + ruleFilterFileName);
-            return this.cl.getResourceAsStream(ruleFilterFileName);
-        }
-
-        return Files.newInputStream(file.toPath());
+        return ValidationRuleFiles.getRuleFilterInputStream(ValidationRuleFiles.ValidationKind.MIAPE);
     }
 
     /**
      * Gets the file name/path of the rule filter file.<br>
      * Note: If found in the folder were application has launched it overrides
      * the default files.
-     * 
+     *
      * @return InputStream for the rule filter filer
      */
     private InputStream getSemanticValidationRuleFilterInputStream() throws IOException {
-        String ruleFilterFileName = MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER +  MzIdentMLValidatorGUI.getProperty("semantic.filter.rule.file");
-        File file = new File(ruleFilterFileName);
-
-        // check if the file exists. If not, return the path
-        if (!file.exists()) {
-            MzIdentMLValidatorGUI.LOGGER.debug("ruleFilterFileName does not exist: " + ruleFilterFileName);
-            return  Thread.currentThread().getContextClassLoader().getResourceAsStream("ruleFilter_semantic.xml");
-        }
-        return Files.newInputStream(file.toPath());
-    }
-
-    /**
-     * Checks if the .mzid version is 1.1
-     * @param mzIdVersion the {@link MzIdVersion} of the file to validate> 1.1 or 1.2.
-     * @return true if .mzid version is 1.1
-     */
-    private boolean isVersion11(MzIdVersion mzIdVersion) {
-        return MzIdVersion._1_1.equals(mzIdVersion);
-    }
-    
-    /**
-     * Checks if the .mzid version is 1.2
-     * @param mzIdVersion the {@link MzIdVersion} of the file to validate> 1.1 or 1.2.
-     * @return true if .mzid version is 1.2
-     */
-    private boolean isVersion12(MzIdVersion mzIdVersion) {
-        return MzIdVersion._1_2.equals(mzIdVersion);
+        return ValidationRuleFiles.getRuleFilterInputStream(ValidationRuleFiles.ValidationKind.SEMANTIC);
     }
 
     /**
      * Gets the file name/path of a mapping or object rule file.<br>
      * Note: If found in the folder were application has launched it overrides the default files.
-     * 
-     * @param mzIdVersion the {@link MzIdVersion} of the file to validate: 1.1 or 1.2.
+     *
+     * @param mzIdVersion the {@link MzIdVersion} of the file to validate: 1.1, 1.2 or 1.3.
      * @param ruleKind "mapping" or "object"
      * @return InputStream for the rule file
-     * @throws FileNotFoundException file not found exception
+     * @throws IOException in case of problems reading the rule file
      */
     public InputStream getRuleFileInputStream(MzIdVersion mzIdVersion, String ruleKind) throws IOException {
-        String propertyName = ruleKind;
-        String ruleFile = this.STR_EMPTY;
-        
-        if (this.isMIAPEValidationSelected()) {
-            propertyName += ".rule.file.miape.validation.";
-        }
-        else if (this.isSemanticValidationSelected()) {
-            propertyName += ".rule.file.semantic.validation.";
-        }
-        
-        if (this.isVersion11(mzIdVersion)) {
-            propertyName += "1.1.0";
-            ruleFile = MzIdentMLValidatorGUI.getProperty(propertyName);
-            MzIdentMLValidatorGUI.LOGGER.debug(".mzid version: 1.1.0");
-        }
-        else if (this.isVersion12(mzIdVersion)) {
-            propertyName += "1.2.0";
-            ruleFile = MzIdentMLValidatorGUI.getProperty(propertyName);
-            MzIdentMLValidatorGUI.LOGGER.debug(".mzid version: 1.2.0");
-        }
-        else {
-            // set default
-            MzIdentMLValidatorGUI.LOGGER.error("Usupported .mzid version: " + mzIdVersion);
-            switch (ruleKind) {
-                case STR_MAPPING:
-                    ruleFile = "mzIdentML-mapping_1.2.0.xml";
-                    break;
-                case STR_OBJECT:
-                    ruleFile = "ObjectRules.1.2.0.xml";
-                    break;
-                default:
-                    MzIdentMLValidatorGUI.LOGGER.error("Unsupported ruleKind: " + ruleKind);
-            }
-        }
-
-        try {
-            URL url = new URL(ruleFile);
-            return url.openStream();
-        }
-        catch (IOException e) {
-            File file = new File(MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER + ruleFile);
-            if (!file.exists()) {
-                MzIdentMLValidatorGUI.LOGGER.debug(ruleKind + "RuleFile does not exist: " + ruleFile);
-                return this.cl.getResourceAsStream(ruleFile);
-            }
-            return Files.newInputStream(file.toPath());
-        }
+        return ValidationRuleFiles.getRuleFileInputStream(mzIdVersion, ruleKind, this.getValidationKind());
     }
-    
+
+    /**
+     * Gets the kind of validation selected by the user.
+     * @return MIAPE if a MIAPE validation was selected, semantic otherwise
+     */
+    public ValidationRuleFiles.ValidationKind getValidationKind() {
+        return this.isMIAPEValidationSelected() ? ValidationRuleFiles.ValidationKind.MIAPE : ValidationRuleFiles.ValidationKind.SEMANTIC;
+    }
+
     /**
      * Checks if semantic validation was selected.
      * @return flag indicating if a semantic validation was selected by the user
@@ -924,15 +871,7 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
      * @return The property value
      */
     public static String getProperty(String propertyName) {
-        // TODO: What is wrong here?
-
-
-        PropertyFile propFile = new PropertyFile();
-        MzIdentMLValidatorGUI.LOGGER.debug("Resources: " + MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER);
-        Properties properties = propFile.loadProperties(MzIdentMLValidatorGUI.STR_RESOURCE_FOLDER + MzIdentMLValidatorGUI.STR_VALIDATION_PROPERTIES);
-        
-        
-        return properties.getProperty(propertyName);
+        return ValidationRuleFiles.getProperty(propertyName);
     }
 
     /**
@@ -1554,10 +1493,10 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
             jPanelValidator.jTextInputFile.setText(args[0]);
         }
 
-        JFrame validatorFrame = new JFrame("mzIdentML validator GUI (mzIdentML versions 1.1.1 & 1.2.0)");
+        JFrame validatorFrame = new JFrame("mzIdentML validator GUI (mzIdentML versions 1.1.1, 1.2.0 & 1.3.0)");
         validatorFrame.getContentPane().add(jPanelValidator, BorderLayout.CENTER);
         validatorFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        validatorFrame.setResizable(false);
+        validatorFrame.setResizable(true);
         validatorFrame.addWindowListener(new WindowAdapter() {
             /**
              * Invoked when a window is in the process of being closed. The
@@ -1570,8 +1509,18 @@ public class MzIdentMLValidatorGUI extends javax.swing.JPanel implements RuleFil
                 System.exit(EXIT_SUCCESS);
             }
         });
-        validatorFrame.setLocation(100, 100);
+        // pack() sizes the frame from the layout, so it fits whatever look and feel is in use,
+        // but cap it at the screen area actually available to windows
         validatorFrame.pack();
+        Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+        Dimension packed = validatorFrame.getSize();
+        Dimension size = new Dimension(Math.min(packed.width, screen.width), Math.min(packed.height, screen.height));
+
+        // note the order: Window.setBounds() silently grows the frame back to its minimum size,
+        // so the minimum has to be the capped size rather than the packed one
+        validatorFrame.setMinimumSize(size);
+        validatorFrame.setSize(size);
+        validatorFrame.setLocationRelativeTo(null);
         validatorFrame.setVisible(true);
     }
 

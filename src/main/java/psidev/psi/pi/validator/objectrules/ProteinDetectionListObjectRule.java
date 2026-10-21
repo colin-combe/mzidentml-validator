@@ -171,7 +171,7 @@ public class ProteinDetectionListObjectRule extends AObjectRule<ProteinDetection
                 + ProteinDetectionListObjectRule.PROTEIN_CLUSTER_IDENTIFIER_CV + ").");
         }
         
-        if (!ProteinDetectionListObjectRule.bContainsCountsOfIdentifiedProteins && MzIdentMLValidator.currentFileVersion.equals(MzIdentMLValidator.MzIdVersion._1_2)) {
+        if (!ProteinDetectionListObjectRule.bContainsCountsOfIdentifiedProteins && MzIdentMLValidator.isVersionAtLeast(MzIdentMLValidator.MzIdVersion._1_2)) {
             ret.add("ProteinDetectionList must contain a CV term MS:1002404 (count of identified proteins).");
         }
         

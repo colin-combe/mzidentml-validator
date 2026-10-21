@@ -43,7 +43,12 @@ public class ProteinAmbiguityGroupObjectRule extends AObjectRule<ProteinAmbiguit
     private static final String XL_INTERACTION_SCORE    = "MS:1002664"; // protein interaction score derived from cross-linking
     private static final String XL_INTERACTION_SCORE_PPL= "MS:1002676"; // protein-pair-level global FDR
     private static final String XL_INTERACTION_SCORE_RPL= "MS:1002677"; // residue-pair-level global FDR
-    private final String STR_REGEXP_XL_INTERACTION_SCORE= "(\\d+[.][a|b]:(\\d+|null):\\d+[.]\\d+([Ee][+-][0-9]+)*:(true|false]\\{1\\}))";
+    // Value format of a cross-linking interaction score, e.g. "10.b:null:0.059:false":
+    // <interaction id>.<a|b>:<residue pair id or null>:<score>:<passes threshold>.
+    // The last group used to read "(true|false]\{1\})", which matches "true" or the literal
+    // text "false]{1}", so every score ending in ":false" was reported as malformed. The
+    // character class of the id suffix likewise matched a literal '|'.
+    private final String STR_REGEXP_XL_INTERACTION_SCORE= "\\d+[.][ab]:(\\d+|null):\\d+[.]\\d+([Ee][+-][0-9]+)?:(true|false)";
 
     private final String STR_COLON = ":";
     private final String STR_POINT = ".";

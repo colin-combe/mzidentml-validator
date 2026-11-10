@@ -16,6 +16,88 @@
 		<java.version>11</java.version>
 	</properties>
 
+	<!-- Security floors for transitive dependencies (same major/line only, so no API changes).
+	     Pulled in via psidev.psi.tools:validator / jmzidentml; remove once those require fixed versions. -->
+	<dependencyManagement>
+		<dependencies>
+			<!-- GHSA-6phf-73q6-gh87 et al.; used by commons-jxpath -->
+			<dependency>
+				<groupId>commons-beanutils</groupId>
+				<artifactId>commons-beanutils</artifactId>
+				<version>1.11.0</version>
+			</dependency>
+			<!-- GHSA-fjq5-5j5f-mvxh et al.; not loaded at runtime -->
+			<dependency>
+				<groupId>commons-collections</groupId>
+				<artifactId>commons-collections</artifactId>
+				<version>3.2.2</version>
+			</dependency>
+			<!-- GHSA-78wr-2p64-hpwj et al. -->
+			<dependency>
+				<groupId>commons-io</groupId>
+				<artifactId>commons-io</artifactId>
+				<version>2.14.0</version>
+			</dependency>
+			<!-- GHSA-9339-86wc-4qgf et al.; not loaded at runtime -->
+			<dependency>
+				<groupId>xalan</groupId>
+				<artifactId>xalan</artifactId>
+				<version>2.7.3</version>
+			</dependency>
+			<!-- logback 1.2.13 (last 1.2.x, still slf4j 1.7): GHSA-vmfg-rjjm-rjrj, GHSA-vmq6-5m68-f53m,
+			     GHSA-668q-qrv7-99fm. Via jmzidentml -> pride-logging. Later advisories need logback 1.3+/slf4j 2. -->
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-core</artifactId>
+				<version>1.2.13</version>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+				<version>1.2.13</version>
+			</dependency>
+			<!-- slf4j aligned to 1.7.x, as required by logback 1.2 (was 1.6.6 via ontology-manager) -->
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>1.7.36</version>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>jcl-over-slf4j</artifactId>
+				<version>1.7.36</version>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-log4j12</artifactId>
+				<version>1.7.36</version>
+			</dependency>
+			<!-- Jackson 2.18.12 (same major; core/databind/annotations kept aligned): 16 advisories
+			     incl. GHSA-jjjh-jjxp-wpff, GHSA-rgv9-q543-rqg4. Used by ols-client (-R / OLS mode) only. -->
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>2.18.12</version>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>2.18.12</version>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-annotations</artifactId>
+				<version>2.18.12</version>
+			</dependency>
+			<!-- reload4j: drop-in replacement for log4j 1.2.x (also what slf4j-log4j12 1.7.36 relocates to) -->
+			<dependency>
+				<groupId>ch.qos.reload4j</groupId>
+				<artifactId>reload4j</artifactId>
+				<version>1.2.27</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
 	<dependencies>
 
 		<dependency>
@@ -33,6 +115,22 @@
 					<groupId>xerces</groupId>
 					<artifactId>xerces</artifactId>
 				</exclusion>
+				<!-- log4j 1.2.8 (via ontology-manager -> ols-core) has unfixable advisories; reload4j below
+				     is the maintained drop-in (same org.apache.log4j API) -->
+				<exclusion>
+					<groupId>log4j</groupId>
+					<artifactId>log4j</artifactId>
+				</exclusion>
+				<!-- never loaded (checked with -Xlog:class+load in local and -R/OLS runs), via ols-core;
+				     mysql 5.1 advisories need 8.x, collections-generic has no fix at all -->
+				<exclusion>
+					<groupId>mysql</groupId>
+					<artifactId>mysql-connector-java</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>net.sourceforge.collections</groupId>
+					<artifactId>collections-generic</artifactId>
+				</exclusion>
 			</exclusions>
 		</dependency>
 
@@ -44,6 +142,11 @@
 		</dependency>
 
 		<!-- 3rd party -->
+		<!-- the validator's own code uses the log4j 1.x API (org.apache.log4j); reload4j provides it -->
+		<dependency>
+			<groupId>ch.qos.reload4j</groupId>
+			<artifactId>reload4j</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>commons-logging</groupId>
 			<artifactId>commons-logging</artifactId>
@@ -52,7 +155,7 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
-			<version>3.12.0</version>
+			<version>3.18.0</version>
 			<type>jar</type>
 		</dependency>
 		<dependency>

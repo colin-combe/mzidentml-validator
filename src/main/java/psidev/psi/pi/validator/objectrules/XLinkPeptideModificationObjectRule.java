@@ -32,14 +32,16 @@ public class XLinkPeptideModificationObjectRule extends AObjectRule<Peptide> {
      * Members.
      */
     private static HashMap<String, HashMap<String, String>> XL_CVVALUE2CVACCESSION2PEPTID_MAP = null;   // CV value --> (CV accession--> peptide ID)
+    private static int cntXLCVsWithoutValue = 0;   // donors / acceptors that cannot be paired, so are not in the map
 
     /**
      * Constructor.
      */
     public XLinkPeptideModificationObjectRule() {
         this(null);
-        
+
         XLinkPeptideModificationObjectRule.XL_CVVALUE2CVACCESSION2PEPTID_MAP = new HashMap<>();
+        XLinkPeptideModificationObjectRule.cntXLCVsWithoutValue = 0;
     }
 
     /**
@@ -48,8 +50,9 @@ public class XLinkPeptideModificationObjectRule extends AObjectRule<Peptide> {
      */
     public XLinkPeptideModificationObjectRule(OntologyManager ontologyManager) {
         super(ontologyManager);
-        
+
         XLinkPeptideModificationObjectRule.XL_CVVALUE2CVACCESSION2PEPTID_MAP = new HashMap<>();
+        XLinkPeptideModificationObjectRule.cntXLCVsWithoutValue = 0;
     }
 
     /**
@@ -95,15 +98,18 @@ public class XLinkPeptideModificationObjectRule extends AObjectRule<Peptide> {
      */
     private void checkForEmptyCVValueAndFillMap(Peptide pept, Modification mod, CvParam cv, List<ValidatorMessage> messages) {
         String cvValue = cv.getValue();
-        
-        // check for empty CV value
-        if (cvValue.isEmpty()) {
+
+        // the value is required, it pairs the donor with its acceptor; without one it cannot be paired, so keep it out of the map
+        if (cvValue == null || cvValue.isEmpty()) {
             messages.add(new ValidatorMessage("The '" + cv.getName()
                 + "' cvParam in the Modification location='" + mod.getLocation() + "' of Peptide (id='" + pept.getId() + "') element at "
-                + XLinkPeptideModificationObjectRule.PEPTIDE_CONTEXT.getContext() + " has an empty value.",
-                MessageLevel.WARN, XLinkPeptideModificationObjectRule.PEPTIDE_CONTEXT, this));
+                + XLinkPeptideModificationObjectRule.PEPTIDE_CONTEXT.getContext() + " has " + (cvValue == null ? "no" : "an empty")
+                + " value; a value is required to pair the cross-link donor with its acceptor.",
+                MessageLevel.ERROR, XLinkPeptideModificationObjectRule.PEPTIDE_CONTEXT, this));
+            XLinkPeptideModificationObjectRule.cntXLCVsWithoutValue++;
+            return;
         }
-        
+
         // fill data to map
         if (!XLinkPeptideModificationObjectRule.XL_CVVALUE2CVACCESSION2PEPTID_MAP.containsKey(cvValue)) {
             XLinkPeptideModificationObjectRule.XL_CVVALUE2CVACCESSION2PEPTID_MAP.put(cvValue, new HashMap<>());
@@ -121,7 +127,9 @@ public class XLinkPeptideModificationObjectRule extends AObjectRule<Peptide> {
         if (XLinkPeptideModificationObjectRule.XL_CVVALUE2CVACCESSION2PEPTID_MAP.isEmpty()) {
             // Peptides associated without a cross-linker (mzIdentML 1.3.0, MS:1003330) carry no
             // donor / acceptor modification, so their absence is not an error in such a file.
-            if (!AdditionalSearchParamsObjectRule.bIsNoncovalentAssociationSearch) {
+            // Donors / acceptors without a value are not in the map, but have already been reported.
+            if (!AdditionalSearchParamsObjectRule.bIsNoncovalentAssociationSearch
+                    && XLinkPeptideModificationObjectRule.cntXLCVsWithoutValue == 0) {
                 ValidatorMessage valMsg = new ValidatorMessage("No cross-linked modified peptides donors (MS:1002509) / receivers (MS:1002510) are found for a cross-linking file "
                     + XLinkPeptideModificationObjectRule.PEPTIDE_CONTEXT.getContext(),
                     MessageLevel.ERROR);

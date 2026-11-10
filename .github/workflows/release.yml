@@ -1,0 +1,46 @@
+# Builds the GUI and command line jars when a version tag (e.g. 1.5.1) is pushed,
+# and attaches them to the GitHub release for that tag.
+
+name: Release
+
+on:
+  push:
+    tags: [ "[0-9]+.[0-9]+.[0-9]+" ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: maven
+    - name: Check the tag matches the version in pom.xml
+      run: |
+        POM_VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.4.1:evaluate -Dexpression=project.version -DforceStdout)
+        if [ "$POM_VERSION" != "$GITHUB_REF_NAME" ]; then
+          echo "::error::Tag $GITHUB_REF_NAME does not match pom.xml version $POM_VERSION"
+          exit 1
+        fi
+    - name: Build the GUI jar
+      run: mvn -B package --file pom.xml
+    - name: Build the command line jar
+      run: mvn -B package -P cmd -DskipTests --file pom.xml
+    - name: Publish the release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        # attach to the release if one was already made for this tag, otherwise create it
+        if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+          gh release upload "$GITHUB_REF_NAME" bin/*.jar --clobber
+        else
+          gh release create "$GITHUB_REF_NAME" bin/*.jar --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        fi

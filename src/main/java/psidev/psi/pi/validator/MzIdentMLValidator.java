@@ -4,15 +4,19 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Pattern;
 import javax.xml.bind.JAXBException;
 
 import org.apache.commons.cli.*;
@@ -87,6 +91,9 @@ public class MzIdentMLValidator extends Validator {
     private static final int EXIT_CODE_MESSAGES = 1;
     private static final int EXIT_CODE_ERROR    = 2;
 
+    /** Matches the encoding pseudo-attribute of an XML declaration. */
+    private static final Pattern XML_DECL_ENCODING = Pattern.compile("\\sencoding\\s*=");
+
     private static final String NO_SCHEMA_VERSION_MSG =
         "Error, if schema file is not provided, a version of the schema must be provided: "
         + String.join(", ", SUPPORTED_SCHEMA_VERSIONS);
@@ -116,6 +123,8 @@ public class MzIdentMLValidator extends Validator {
     private boolean skipSchemaValidation = false;
 
     private MzIdentMLUnmarshaller unmarshaller = null;
+    /** Copy of the input file indexed instead of it, see {@link #getIndexableFile(File)}; null if none. */
+    private File indexedCopy = null;
     private RuleFilterManager ruleFilterManager;
     private ExtendedValidatorReport extendedReport;
 
@@ -498,7 +507,11 @@ public class MzIdentMLValidator extends Validator {
 
             this.updateProgress("Indexing input file" + this. STR_ELLIPSIS);
             try {
-                this.unmarshaller = new MzIdentMLUnmarshaller(xmlFile);
+                this.unmarshaller = new MzIdentMLUnmarshaller(this.getIndexableFile(xmlFile));
+            }
+            catch (IOException ioe) {
+                this.LOGGER.error("Could not index the input file.", ioe);
+                return this.getInvalidOrEmptyFileErrorMessages(xmlFile, " could not be indexed: " + ioe.getMessage());
             }
             catch (IllegalStateException ise) {
                 // jmzidentml rejects any version it does not know. Report it rather than let the
@@ -559,6 +572,52 @@ public class MzIdentMLValidator extends Validator {
             this.checkForNonAnticipatedCvTerms();
 
             return this.filterAndClusterMessages();
+        }
+    }
+
+    /**
+     * Gets the file jmzidentml should index. jmzidentml passes the encoding named in the XML
+     * declaration straight to xxindex, which fails with "Null charset name" if there is none.
+     * Such a file is UTF-8 (XML 1.0, section 4.3.3), so a copy whose declaration says so is
+     * indexed instead. Only the declaration changes, so line numbers stay the same.
+     *
+     * @param xmlFile the mzIdentML file to validate, starting with an XML declaration.
+     * @return xmlFile, or the copy of it to index
+     * @throws IOException if the copy could not be written
+     */
+    private File getIndexableFile(File xmlFile) throws IOException {
+        this.deleteIndexedCopy();
+
+        String head;
+        try (InputStream in = new FileInputStream(xmlFile)) {
+            head = new String(in.readNBytes(1024), StandardCharsets.ISO_8859_1);
+        }
+        int declEnd = head.indexOf("?>");
+        if (declEnd < 0 || XML_DECL_ENCODING.matcher(head.substring(0, declEnd)).find()) {
+            return xmlFile;
+        }
+
+        this.LOGGER.info("The XML declaration of " + xmlFile.getName() + " names no encoding, indexing it as UTF-8.");
+        File copy = File.createTempFile("mzidentml-validator-", ".mzid");
+        copy.deleteOnExit();
+        this.indexedCopy = copy;
+        try (InputStream in = new FileInputStream(xmlFile); OutputStream out = new FileOutputStream(copy)) {
+            in.readNBytes(declEnd);
+            out.write((head.substring(0, declEnd).stripTrailing() + " encoding=\"UTF-8\"").getBytes(StandardCharsets.ISO_8859_1));
+            in.transferTo(out);
+        }
+        return copy;
+    }
+
+    /**
+     * Deletes the copy made by {@link #getIndexableFile(File)}, if any.
+     */
+    private void deleteIndexedCopy() {
+        if (this.indexedCopy != null) {
+            if (!this.indexedCopy.delete()) {
+                this.LOGGER.warn("Could not delete " + this.indexedCopy.getAbsolutePath());
+            }
+            this.indexedCopy = null;
         }
     }
 
@@ -1472,6 +1531,7 @@ public class MzIdentMLValidator extends Validator {
         this.msgLevel = MessageLevel.DEBUG;
         // reset the unmarshaller
         this.unmarshaller = null;
+        this.deleteIndexedCopy();
         // reset the progress counter
         this.progress = 0;
 
@@ -1755,8 +1815,8 @@ public class MzIdentMLValidator extends Validator {
     private static int runCommandLine(String[] args) {
         Options options = createValidatorOptions();
 
-        String header = "mzidentml-validator version 1.4.36-SNAPSHOT\n\n";
-        String footer = "\nPlease report issues at https://github.com/ypriverol/mzidentml-validator/issues";
+        String header = "mzidentml-validator version 1.5.1\n\n";
+        String footer = "\nPlease report issues at https://github.com/HUPO-PSI/mzidentml-validator/issues";
 
         HelpFormatter formatter = new HelpFormatter();
         BufferedReader br = null;

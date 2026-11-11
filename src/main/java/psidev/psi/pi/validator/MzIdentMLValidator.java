@@ -879,7 +879,7 @@ public class MzIdentMLValidator extends Validator {
                     System.err.println("Input file     : " + xmlFile.getAbsolutePath());
                     System.err.println("Schema location: " + this.schemaUri);
                     this.getMessageCollection().stream().peek((msg) -> System.out.println(msg.getMessage())).forEach((msg) -> this.extendedReport.addInvalidSchemaValidationMessage(msg.getMessage()));
-                    System.exit(MzIdentMLValidatorGUI.EXIT_FAILURE);
+                    System.exit(EXIT_CODE_MESSAGES);
                 }
             }
             System.out.println("XML schema validation complete, file valid against .xsd schema.");
@@ -1373,7 +1373,7 @@ public class MzIdentMLValidator extends Validator {
             e.printStackTrace(System.err);
         }
         
-        System.exit(MzIdentMLValidatorGUI.EXIT_FAILURE);
+        System.exit(EXIT_CODE_ERROR);
         return false;
     }
 
@@ -1884,6 +1884,10 @@ public class MzIdentMLValidator extends Validator {
             } else if(cmd.hasOption("e")){
                 // Validate existence of input files.
                 File inputFile = new File(cmd.getOptionValue("f"));
+                if (!inputFile.isFile()) {
+                    System.err.println("The mzIdentML file you specified '" + inputFile.getPath() + "' does not exist!");
+                    return EXIT_CODE_ERROR;
+                }
 
                 final ValidationRuleFiles.ValidationKind validationKind = cmd.hasOption("p")
                     ? ValidationRuleFiles.ValidationKind.MIAPE
@@ -2136,7 +2140,7 @@ public class MzIdentMLValidator extends Validator {
      */
     private static void printError(String aMessage) {
         System.err.println(DOUBLE_NEW_LINE + aMessage + DOUBLE_NEW_LINE);
-        System.exit(MzIdentMLValidatorGUI.EXIT_FAILURE);
+        System.exit(EXIT_CODE_ERROR);
     }
 
     /**
